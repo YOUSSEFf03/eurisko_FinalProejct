@@ -1,0 +1,86 @@
+networks:
+  microservices-net:
+    driver: bridge
+
+services:
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api-gateway
+    networks:
+      - microservices-net
+
+  api-gateway:
+    build:
+      context: .
+      args:
+        APP_NAME: api-gateway
+    environment:
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - kafka
+      - redis
+    networks:
+      - microservices-net
+
+  user-service:
+    build:
+      context: .
+      args:
+        APP_NAME: user-service
+    environment:
+      - PORT=3001
+      - MONGODB_URI=mongodb://root:root@mongodb:27017/users?authSource=admin
+    depends_on:
+      - kafka
+      - mongodb
+    networks:
+      - microservices-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - microservices-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - microservices-net
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - microservices-net
+
+  mongodb:
+    image: mongo:7-jammy
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - microservices-net
+
+volumes:
+  mongo_data:
