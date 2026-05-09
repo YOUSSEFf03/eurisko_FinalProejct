@@ -39,8 +39,29 @@ services:
       - PORT=3001
       - MONGODB_URI=mongodb://root:root@mongodb:27017/users?authSource=admin
     depends_on:
-      - kafka
-      - mongodb
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - microservices-net
+
+  auth-service:
+    build:
+      context: .
+      args:
+        APP_NAME: auth-service
+    environment:
+      - PORT=3003
+      - MONGODB_URI=mongodb://root:root@mongodb:27017/auth?authSource=admin
+      - KAFKA_BROKERS=kafka:9092
+      - JWT_SECRET=74f4e738d86335c9728796de50e151b3e2ab217a9235452f0ae3b72934803093w
+      - JWT_EXPIRES_IN=7d
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
     networks:
       - microservices-net
 
@@ -81,6 +102,24 @@ services:
       - mongo_data:/data/db
     networks:
       - microservices-net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--username",
+          "root",
+          "--password",
+          "root",
+          "--authenticationDatabase",
+          "admin",
+          "--eval",
+          "db.adminCommand('ping')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   mongo_data:
