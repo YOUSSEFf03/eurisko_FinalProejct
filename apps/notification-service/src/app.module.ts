@@ -7,6 +7,7 @@ import { NotificationLogModule } from './notification-log/notification-log.modul
 import { EmailModule } from './channels/email/email.module';
 import { IdempotencyModule } from './idempotency/idempotency.module';
 import { RetryModule } from './retry/retry.module';
+import { TemplateModule } from './templates/template.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { RetryModule } from './retry/retry.module';
         uri: cs.get<string>('mongodb.uri'),
       }),
     }),
+    TemplateModule,
     EmailModule,
     IdempotencyModule,
     RetryModule,
