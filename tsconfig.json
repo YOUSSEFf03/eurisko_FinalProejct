@@ -18,8 +18,12 @@
     "noFallthroughCasesInSwitch": false,
     "ignoreDeprecations": "5.0",
     "paths": {
-      "@app/common": ["./libs/common/src"],
-      "@app/common/*": ["./libs/common/src/*"]
+      "@app/common": [
+        "./libs/common/src"
+      ],
+      "@app/common/*": [
+        "./libs/common/src/*"
+      ]
     },
     "baseUrl": "./"
   }
