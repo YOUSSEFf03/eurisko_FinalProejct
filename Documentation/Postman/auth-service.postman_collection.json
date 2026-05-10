@@ -1,0 +1,692 @@
+{
+  "info": {
+    "_postman_id": "auth-service-v1",
+    "name": "Stock Market — Auth Service",
+    "description": "Complete auth service API. Import this file then set the collection variables: baseUrl, userEmail, userPassword. accessToken and refreshToken are set automatically by the Login test script.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",      "value": "http://localhost:3001/api/v1", "type": "string" },
+    { "key": "accessToken",  "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "userEmail",    "value": "adam@example.com", "type": "string" },
+    { "key": "userPassword", "value": "Test@1234!", "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "Registration Flow",
+      "item": [
+
+        {
+          "name": "1 — Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('success is true', () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.success).to.be.true;",
+                  "  pm.expect(b.data.message).to.include('OTP');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Adam Smith\",\n  \"email\": \"{{userEmail}}\",\n  \"nationalId\": \"NID-123456\",\n  \"dateOfBirth\": \"1995-06-15\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "201 — registered successfully",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Adam Smith\",\n  \"email\": \"adam@example.com\",\n  \"nationalId\": \"NID-123456\",\n  \"dateOfBirth\": \"1995-06-15\"\n}" }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"data\": {\n    \"message\": \"Registration successful. Check your console for the OTP.\"\n  },\n  \"timestamp\": \"2025-01-15T10:00:00.000Z\"\n}"
+            },
+            {
+              "name": "409 — email already exists",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Adam Smith\",\n  \"email\": \"adam@example.com\",\n  \"nationalId\": \"NID-123456\",\n  \"dateOfBirth\": \"1995-06-15\"\n}" }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 409,\n  \"error\": \"DUPLICATE_KEY\",\n  \"message\": \"An account with this email already exists\",\n  \"path\": \"/api/v1/auth/register\",\n  \"timestamp\": \"2025-01-15T10:00:00.000Z\"\n}"
+            },
+            {
+              "name": "400 — under 18",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Adam Smith\",\n  \"email\": \"young@example.com\",\n  \"nationalId\": \"NID-999\",\n  \"dateOfBirth\": \"2015-01-01\"\n}" }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"error\": \"BAD_REQUEST\",\n  \"message\": \"You must be at least 18 years old to register\",\n  \"path\": \"/api/v1/auth/register\",\n  \"timestamp\": \"2025-01-15T10:00:00.000Z\"\n}"
+            },
+            {
+              "name": "400 — validation errors",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"\",\n  \"email\": \"not-an-email\",\n  \"nationalId\": \"NID\",\n  \"dateOfBirth\": \"not-a-date\"\n}" }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"fullName\", \"messages\": [\"fullName must be longer than or equal to 2 characters\"] },\n    { \"field\": \"email\", \"messages\": [\"email must be a valid email address\"] },\n    { \"field\": \"nationalId\", \"messages\": [\"National ID must be at least 5 characters\"] },\n    { \"field\": \"dateOfBirth\", \"messages\": [\"dateOfBirth must be a valid ISO-8601 date (YYYY-MM-DD)\"] }\n  ],\n  \"path\": \"/api/v1/auth/register\",\n  \"timestamp\": \"2025-01-15T10:00:00.000Z\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "2 — Verify OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('OTP verified message', () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.success).to.be.true;",
+                  "  pm.expect(b.data.message).to.include('verified');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify-otp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"123456\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 — OTP verified",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/verify-otp", "host": ["{{baseUrl}}"], "path": ["auth", "verify-otp"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\",\n  \"code\": \"123456\"\n}" }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"data\": {\n    \"message\": \"OTP verified. Proceed to set your password.\"\n  },\n  \"timestamp\": \"2025-01-15T10:01:00.000Z\"\n}"
+            },
+            {
+              "name": "400 — wrong code",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/verify-otp", "host": ["{{baseUrl}}"], "path": ["auth", "verify-otp"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\",\n  \"code\": \"000000\"\n}" }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"error\": \"BAD_REQUEST\",\n  \"message\": \"Incorrect OTP code.\",\n  \"path\": \"/api/v1/auth/verify-otp\",\n  \"timestamp\": \"2025-01-15T10:01:00.000Z\"\n}"
+            },
+            {
+              "name": "400 — expired OTP",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/verify-otp", "host": ["{{baseUrl}}"], "path": ["auth", "verify-otp"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\",\n  \"code\": \"123456\"\n}" }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"error\": \"BAD_REQUEST\",\n  \"message\": \"OTP has expired. Please request a new one.\",\n  \"path\": \"/api/v1/auth/verify-otp\",\n  \"timestamp\": \"2025-01-15T10:01:00.000Z\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "3 — Set Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Account activated', () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.success).to.be.true;",
+                  "  pm.expect(b.data.message).to.include('log in');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/auth/set-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "set-password"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"123456\",\n  \"password\": \"{{userPassword}}\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 — password set, account active",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/set-password", "host": ["{{baseUrl}}"], "path": ["auth", "set-password"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\",\n  \"code\": \"123456\",\n  \"password\": \"Test@1234!\"\n}" }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"data\": {\n    \"message\": \"Password set successfully. You can now log in.\"\n  },\n  \"timestamp\": \"2025-01-15T10:02:00.000Z\"\n}"
+            },
+            {
+              "name": "400 — OTP not verified",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/set-password", "host": ["{{baseUrl}}"], "path": ["auth", "set-password"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\",\n  \"code\": \"999999\",\n  \"password\": \"Test@1234!\"\n}" }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"error\": \"BAD_REQUEST\",\n  \"message\": \"OTP not verified or session expired. Please re-verify.\",\n  \"path\": \"/api/v1/auth/set-password\",\n  \"timestamp\": \"2025-01-15T10:02:00.000Z\"\n}"
+            },
+            {
+              "name": "400 — weak password",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/set-password", "host": ["{{baseUrl}}"], "path": ["auth", "set-password"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\",\n  \"code\": \"123456\",\n  \"password\": \"password\"\n}" }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"password\", \"messages\": [\"Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character\"] }\n  ],\n  \"path\": \"/api/v1/auth/set-password\",\n  \"timestamp\": \"2025-01-15T10:02:00.000Z\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Resend OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/auth/resend-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "resend-otp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 — OTP resent",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/resend-otp", "host": ["{{baseUrl}}"], "path": ["auth", "resend-otp"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\"\n}" }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"data\": {\n    \"message\": \"A new OTP has been sent.\"\n  },\n  \"timestamp\": \"2025-01-15T10:01:30.000Z\"\n}"
+            },
+            {
+              "name": "400 — email already verified",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/resend-otp", "host": ["{{baseUrl}}"], "path": ["auth", "resend-otp"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\"\n}" }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"error\": \"BAD_REQUEST\",\n  \"message\": \"Email is already verified\",\n  \"path\": \"/api/v1/auth/resend-otp\",\n  \"timestamp\": \"2025-01-15T10:01:30.000Z\"\n}"
+            }
+          ]
+        }
+
+      ]
+    },
+
+    {
+      "name": "Session",
+      "item": [
+
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tokens stored', () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.success).to.be.true;",
+                  "  pm.expect(b.data.accessToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(b.data.refreshToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(b.data.member).to.be.an('object');",
+                  "  pm.collectionVariables.set('accessToken', b.data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', b.data.refreshToken);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 — login success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\",\n  \"password\": \"Test@1234!\"\n}" }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"data\": {\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NGYxYTJiM2M0ZDVlNmY3YThiOWMwZDEiLCJlbWFpbCI6ImFkYW1AZXhhbXBsZS5jb20iLCJ0eXBlIjoibWVtYmVyIiwiaWF0IjoxNzA1MzEyMjAwLCJleHAiOjE3MDUzMTMxMDB9.signature\",\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NGYxYTJiM2M0ZDVlNmY3YThiOWMwZDEiLCJlbWFpbCI6ImFkYW1AZXhhbXBsZS5jb20iLCJ0eXBlIjoibWVtYmVyIiwiaWF0IjoxNzA1MzEyMjAwLCJleHAiOjE3MDU5MTcwMDB9.signature\",\n    \"member\": {\n      \"_id\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n      \"fullName\": \"Adam Smith\",\n      \"email\": \"adam@example.com\",\n      \"walletBalance\": 0,\n      \"status\": \"active\",\n      \"kycStatus\": \"pending\"\n    }\n  },\n  \"timestamp\": \"2025-01-15T10:03:00.000Z\"\n}"
+            },
+            {
+              "name": "401 — wrong credentials",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\",\n  \"password\": \"WrongPassword!\"\n}" }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 401,\n  \"error\": \"UNAUTHORIZED\",\n  \"message\": \"Invalid email or password\",\n  \"path\": \"/api/v1/auth/login\",\n  \"timestamp\": \"2025-01-15T10:03:00.000Z\"\n}"
+            },
+            {
+              "name": "401 — account suspended",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"suspended@example.com\",\n  \"password\": \"Test@1234!\"\n}" }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 401,\n  \"error\": \"UNAUTHORIZED\",\n  \"message\": \"Account suspended: Violation of terms of service\",\n  \"path\": \"/api/v1/auth/login\",\n  \"timestamp\": \"2025-01-15T10:03:00.000Z\"\n}"
+            },
+            {
+              "name": "429 — rate limited",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\",\n  \"password\": \"Test@1234!\"\n}" }
+              },
+              "status": "Too Many Requests",
+              "code": 429,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 429,\n  \"error\": \"TOO_MANY_REQUESTS\",\n  \"message\": \"ThrottlerException: Too Many Requests\",\n  \"path\": \"/api/v1/auth/login\",\n  \"timestamp\": \"2025-01-15T10:03:00.000Z\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('New token pair stored', () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.data.accessToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(b.data.refreshToken).to.be.a('string').and.not.empty;",
+                  "  pm.collectionVariables.set('accessToken', b.data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', b.data.refreshToken);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 — new token pair",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] },
+                "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"data\": {\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...new\",\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...new\"\n  },\n  \"timestamp\": \"2025-01-15T10:04:00.000Z\"\n}"
+            },
+            {
+              "name": "401 — token reuse detected",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] },
+                "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"old.already.used.token\"\n}" }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 401,\n  \"error\": \"UNAUTHORIZED\",\n  \"message\": \"Token reuse detected. All sessions revoked.\",\n  \"path\": \"/api/v1/auth/refresh\",\n  \"timestamp\": \"2025-01-15T10:04:00.000Z\"\n}"
+            },
+            {
+              "name": "401 — expired refresh token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] },
+                "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"expired.token.here\"\n}" }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 401,\n  \"error\": \"UNAUTHORIZED\",\n  \"message\": \"Invalid or expired refresh token\",\n  \"path\": \"/api/v1/auth/refresh\",\n  \"timestamp\": \"2025-01-15T10:04:00.000Z\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tokens cleared', () => {",
+                  "  pm.expect(pm.response.json().success).to.be.true;",
+                  "  pm.collectionVariables.set('accessToken', '');",
+                  "  pm.collectionVariables.set('refreshToken', '');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "body": { "mode": "raw", "raw": "" }
+          },
+          "response": [
+            {
+              "name": "200 — logged out",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiJ9..." }
+                ],
+                "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] },
+                "body": { "mode": "raw", "raw": "" }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"data\": {\n    \"message\": \"Logged out successfully\"\n  },\n  \"timestamp\": \"2025-01-15T10:05:00.000Z\"\n}"
+            },
+            {
+              "name": "401 — no token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] },
+                "body": { "mode": "raw", "raw": "" }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 401,\n  \"error\": \"UNAUTHORIZED\",\n  \"message\": \"Authentication required\",\n  \"path\": \"/api/v1/auth/logout\",\n  \"timestamp\": \"2025-01-15T10:05:00.000Z\"\n}"
+            },
+            {
+              "name": "401 — token expired",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Authorization", "value": "Bearer expired.token.here" }
+                ],
+                "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] },
+                "body": { "mode": "raw", "raw": "" }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 401,\n  \"error\": \"UNAUTHORIZED\",\n  \"message\": \"Access token has expired\",\n  \"path\": \"/api/v1/auth/logout\",\n  \"timestamp\": \"2025-01-15T10:05:00.000Z\"\n}"
+            }
+          ]
+        }
+
+      ]
+    },
+
+    {
+      "name": "Password Reset",
+      "item": [
+
+        {
+          "name": "Forgot Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('No email enumeration', () => {",
+                  "  const msg = pm.response.json().data.message;",
+                  "  pm.expect(msg).to.include('If that email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "forgot-password"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 — always same response (no enumeration)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/forgot-password", "host": ["{{baseUrl}}"], "path": ["auth", "forgot-password"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\"\n}" }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"data\": {\n    \"message\": \"If that email is registered, a reset OTP has been sent.\"\n  },\n  \"timestamp\": \"2025-01-15T10:06:00.000Z\"\n}"
+            }
+          ]
+        },
+
+        {
+          "name": "Reset Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Password reset, sessions revoked', () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.success).to.be.true;",
+                  "  pm.expect(b.data.message).to.include('log in');",
+                  "  pm.collectionVariables.set('accessToken', '');",
+                  "  pm.collectionVariables.set('refreshToken', '');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "reset-password"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"code\": \"123456\",\n  \"newPassword\": \"NewPass@5678!\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "200 — password reset successfully",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["auth", "reset-password"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\",\n  \"code\": \"123456\",\n  \"newPassword\": \"NewPass@5678!\"\n}" }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"data\": {\n    \"message\": \"Password reset successfully. Please log in.\"\n  },\n  \"timestamp\": \"2025-01-15T10:07:00.000Z\"\n}"
+            },
+            {
+              "name": "400 — wrong OTP",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["auth", "reset-password"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\",\n  \"code\": \"000000\",\n  \"newPassword\": \"NewPass@5678!\"\n}" }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"error\": \"BAD_REQUEST\",\n  \"message\": \"Incorrect OTP code.\",\n  \"path\": \"/api/v1/auth/reset-password\",\n  \"timestamp\": \"2025-01-15T10:07:00.000Z\"\n}"
+            },
+            {
+              "name": "400 — OTP expired",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["auth", "reset-password"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adam@example.com\",\n  \"code\": \"123456\",\n  \"newPassword\": \"NewPass@5678!\"\n}" }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"error\": \"BAD_REQUEST\",\n  \"message\": \"OTP has expired. Please request a new one.\",\n  \"path\": \"/api/v1/auth/reset-password\",\n  \"timestamp\": \"2025-01-15T10:07:00.000Z\"\n}"
+            }
+          ]
+        }
+
+      ]
+    }
+
+  ]
+}
