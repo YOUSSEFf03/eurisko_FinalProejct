@@ -65,6 +65,36 @@ services:
     networks:
       - microservices-net
 
+
+    notification-service:
+    build:
+      context: .
+      args:
+        APP_NAME: notification-service
+    environment:
+      - PORT=3004
+      - MONGODB_URI=mongodb://root:root@mongodb:27017/notifications?authSource=admin
+      - KAFKA_BROKERS=kafka:9092
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MAILGUN_API_KEY=${MAILGUN_API_KEY}
+      - MAILGUN_DOMAIN=${MAILGUN_DOMAIN}
+      - MAILGUN_FROM=${MAILGUN_FROM}
+      - IDEMPOTENCY_TTL_SECONDS=86400
+      - RETRY_MAX_ATTEMPTS=3
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - microservices-net
+
+      
+          
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
