@@ -6,6 +6,7 @@ import { NotificationLogService } from '../notification-log/notification.service
 import { IdempotencyService } from '../idempotency/idempotency.service';
 import { RetryService } from '../retry/retry.service';
 import { NotificationType } from '@app/common';
+import { Types } from 'mongoose';
 
 interface ProcessOptions {
   userId: string;
@@ -63,7 +64,7 @@ export class ProcessorService {
       idempotencyKey,
     );
 
-    const logId = (log._id as string).toString();
+    const logId = (log._id as Types.ObjectId).toString();
 
     // 3. Render template
     const html = this.templateService.render(templateName, templateContext);
