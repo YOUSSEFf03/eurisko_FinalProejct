@@ -15,4 +15,7 @@ ENV APP_NAME=${APP_NAME}
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 
+# Copy templates for notification service
+COPY --from=builder /app/apps/notification-service/src/templates ./dist/apps/notification-service/templates
+
 CMD node dist/apps/${APP_NAME}/main

@@ -1,0 +1,108 @@
+<html>
+  <head>
+    <meta charset='UTF-8' />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f4f4;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 600px;
+        margin: 40px auto;
+        background: #ffffff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: #1a1a2e;
+        padding: 30px;
+        text-align: center;
+      }
+      .header h1 {
+        color: #e94560;
+        margin: 0;
+        font-size: 24px;
+      }
+      .header p {
+        color: #aaa;
+        margin: 8px 0 0;
+        font-size: 14px;
+      }
+      .body {
+        padding: 40px 30px;
+      }
+      .body p {
+        color: #333;
+        font-size: 15px;
+        line-height: 1.6;
+      }
+      .credentials {
+        background: #f0f4ff;
+        border: 1px solid #c5cae9;
+        border-radius: 6px;
+        padding: 20px 25px;
+        margin: 25px 0;
+      }
+      .credentials table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .credentials td {
+        padding: 10px 0;
+        font-size: 14px;
+        color: #555;
+        border-bottom: 1px solid #e0e0e0;
+      }
+      .credentials td:last-child {
+        text-align: right;
+        font-weight: bold;
+        color: #1a1a2e;
+        font-family: monospace;
+        font-size: 15px;
+      }
+      .warning {
+        background: #fff3e0;
+        border-left: 4px solid #ef6c00;
+        border-radius: 4px;
+        padding: 12px 16px;
+        font-size: 13px;
+        color: #bf360c;
+        margin-top: 20px;
+      }
+      .footer {
+        background: #f4f4f4;
+        padding: 20px;
+        text-align: center;
+        color: #aaa;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class='container'>
+      <div class='header'>
+        <h1>Stock Market Platform</h1>
+        <p>CMS Access Provisioned</p>
+      </div>
+      <div class='body'>
+        <p>Hi <strong>{{name}}</strong>,</p>
+        <p>Your CMS account has been created. Below are your login credentials:</p>
+        <div class='credentials'>
+          <table>
+            <tr><td>Email</td><td>{{email}}</td></tr>
+            <tr><td>Temporary Password</td><td>{{temporaryPassword}}</td></tr>
+            <tr><td>Role</td><td>{{role}}</td></tr>
+          </table>
+        </div>
+        <div class='warning'>
+          ⚠ You must change your password upon first login. This temporary
+          password expires in 24 hours.
+        </div>
+      </div>
+      <div class='footer'>© 2026 Stock Market Platform. All rights reserved.</div>
+    </div>
+  </body>
+</html>

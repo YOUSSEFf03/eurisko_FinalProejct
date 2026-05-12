@@ -1,0 +1,96 @@
+<html>
+  <head>
+    <meta charset='UTF-8' />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f4f4;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 600px;
+        margin: 40px auto;
+        background: #ffffff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: #1a1a2e;
+        padding: 30px;
+        text-align: center;
+      }
+      .header h1 {
+        color: #e94560;
+        margin: 0;
+        font-size: 24px;
+      }
+      .alert-icon {
+        font-size: 40px;
+        margin-top: 10px;
+      }
+      .body {
+        padding: 40px 30px;
+      }
+      .body p {
+        color: #333;
+        font-size: 15px;
+        line-height: 1.6;
+      }
+      .alert-box {
+        background: #fff8e1;
+        border-left: 4px solid #f9a825;
+        border-radius: 4px;
+        padding: 20px 25px;
+        margin: 25px 0;
+      }
+      .alert-box .ticker {
+        font-size: 22px;
+        font-weight: bold;
+        color: #1a1a2e;
+      }
+      .alert-box .price {
+        font-size: 32px;
+        font-weight: bold;
+        color: #e94560;
+        margin: 8px 0;
+      }
+      .alert-box .target {
+        color: #666;
+        font-size: 14px;
+      }
+      .footer {
+        background: #f4f4f4;
+        padding: 20px;
+        text-align: center;
+        color: #aaa;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class='container'>
+      <div class='header'>
+        <h1>Stock Market Platform</h1>
+        <div class='alert-icon'>🔔</div>
+      </div>
+      <div class='body'>
+        <p>Hi <strong>{{name}}</strong>,</p>
+        <p>Your price alert for
+          <strong>{{companyName}}</strong>
+          has been triggered.</p>
+        <div class='alert-box'>
+          <div class='ticker'>{{ticker}}</div>
+          <div class='price'>${{currentPrice}}</div>
+          <div class='target'>
+            Your target: ${{targetPrice}}
+            ({{direction}})
+          </div>
+        </div>
+        <p>Log in now to review your position and take action.</p>
+      </div>
+      <div class='footer'>© 2026 Stock Market Platform. All rights reserved.</div>
+    </div>
+  </body>
+</html>
