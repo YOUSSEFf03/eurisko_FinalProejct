@@ -64,17 +64,19 @@ export class OtpService {
       expiresAt,
     });
 
-    // ── Delivery ──────────────────────────────────────────────────────────────
-    // Phase 1 (current): print to console
-    // Phase 2 (email microservice): uncomment kafkaClient.emit() below
-    this.printToConsole(user.email, user.fullName, code, purpose, expiresAt);
+    // Publish to Kafka → notification-service will send the email
+    this.kafkaClient.emit('notification.otp.send', {
+      userId: String(user._id),
+      email: user.email,
+      name: user.fullName,
+      otp: code,
+      expiresInMinutes: expiresMinutes,
+    });
 
-    // TODO: uncomment once email microservice is deployed
-    // this.kafkaClient.emit(NotificationEvent.OTP_CREATED, {
-    //   type:    NotificationEvent.OTP_CREATED,
-    //   payload: { email: user.email, name: user.fullName, code, purpose },
-    //   timestamp: new Date().toISOString(),
-    // });
+    this.logger.log(`OTP event published for ${user.email}`);
+
+    // Keep console log for development visibility
+    this.printToConsole(user.email, user.fullName, code, purpose, expiresAt);
   }
 
   // ─── Validate ─────────────────────────────────────────────────────────────
