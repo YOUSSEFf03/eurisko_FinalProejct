@@ -17,6 +17,7 @@ export class Notification {
   email: string;
 
   @Prop({
+    type: String,
     required: true,
     enum: [
       'OTP_SEND',
@@ -28,10 +29,16 @@ export class Notification {
   })
   type: NotificationType;
 
-  @Prop({ required: true, enum: ['EMAIL', 'PUSH'], default: 'EMAIL' })
+  @Prop({
+    type: String,
+    required: true,
+    enum: ['EMAIL', 'PUSH'],
+    default: 'EMAIL',
+  })
   channel: NotificationChannel;
 
   @Prop({
+    type: String,
     required: true,
     enum: ['PENDING', 'SENT', 'FAILED', 'RETRYING', 'DEAD'],
     default: 'PENDING',
@@ -44,13 +51,13 @@ export class Notification {
   @Prop({ type: Object })
   payload: Record<string, unknown>;
 
-  @Prop()
+  @Prop({ type: String })
   idempotencyKey: string;
 
-  @Prop()
+  @Prop({ type: String })
   errorMessage?: string;
 
-  @Prop()
+  @Prop({ type: Date })
   sentAt?: Date;
 }
 

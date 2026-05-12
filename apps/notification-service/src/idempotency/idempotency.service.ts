@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { REDIS_CLIENT } from './idempotency.module';
+import { REDIS_CLIENT } from './idempotency.constants';
 import { RedisClientType } from 'redis';
 
 @Injectable()

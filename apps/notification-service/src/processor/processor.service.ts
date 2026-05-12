@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../channels/email/email.service';
@@ -7,6 +8,7 @@ import { IdempotencyService } from '../idempotency/idempotency.service';
 import { RetryService } from '../retry/retry.service';
 import { NotificationType } from '@app/common';
 import { Types } from 'mongoose';
+import { NotificationDocument } from '../notification-log/notification.schema';
 
 interface ProcessOptions {
   userId: string;
@@ -54,20 +56,36 @@ export class ProcessorService {
       return;
     }
 
-    // 2. Create notification log
-    const log = await this.notificationLogService.createPending(
-      userId,
-      email,
-      type,
-      'EMAIL',
-      templateContext,
-      idempotencyKey,
-    );
+    // 2. Create notification log — catch duplicate key errors
+    let log: NotificationDocument;
+    try {
+      log = await this.notificationLogService.createPending(
+        userId,
+        email,
+        type,
+        'EMAIL',
+        templateContext,
+        idempotencyKey,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Notification log already exists for key: ${idempotencyKey} — skipping`,
+      );
+      return;
+    }
 
     const logId = (log._id as Types.ObjectId).toString();
 
     // 3. Render template
-    const html = this.templateService.render(templateName, templateContext);
+    let html: string;
+    try {
+      html = this.templateService.render(templateName, templateContext);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Template render failed: ${message}`);
+      await this.notificationLogService.markFailed(logId, message);
+      return;
+    }
 
     // 4. Send with retry
     await this.retryService.executeWithRetry(

@@ -1,12 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import { createClient } from 'redis';
 import { IdempotencyService } from './idempotency.service';
-
-export const REDIS_CLIENT = 'REDIS_CLIENT';
+import { REDIS_CLIENT } from './idempotency.constants';
 
 @Module({
-  imports: [ConfigModule],
   providers: [
     {
       provide: REDIS_CLIENT,
@@ -14,8 +12,8 @@ export const REDIS_CLIENT = 'REDIS_CLIENT';
       useFactory: async (cs: ConfigService) => {
         const client = createClient({
           socket: {
-            host: cs.get<string>('redis.host'),
-            port: cs.get<number>('redis.port'),
+            host: cs.get<string>('redis.host') ?? 'redis',
+            port: cs.get<number>('redis.port') ?? 6379,
           },
         });
         await client.connect();
@@ -24,6 +22,6 @@ export const REDIS_CLIENT = 'REDIS_CLIENT';
     },
     IdempotencyService,
   ],
-  exports: [IdempotencyService],
+  exports: [REDIS_CLIENT, IdempotencyService],
 })
 export class IdempotencyModule {}

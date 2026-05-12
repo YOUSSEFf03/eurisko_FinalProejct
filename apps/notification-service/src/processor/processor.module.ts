@@ -19,13 +19,14 @@ import { CmsConsumer } from '../consumers/cms.consumer';
     IdempotencyModule,
     RetryModule,
   ],
-  providers: [
-    ProcessorService,
+  controllers: [
+    // ← MUST be controllers, not providers
     OtpConsumer,
     WalletConsumer,
     TradeConsumer,
     PriceAlertConsumer,
     CmsConsumer,
   ],
+  providers: [ProcessorService],
 })
 export class ProcessorModule {}

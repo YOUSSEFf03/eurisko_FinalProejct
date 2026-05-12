@@ -10,7 +10,7 @@ export class TemplateService {
   private readonly cache = new Map<string, handlebars.TemplateDelegate>();
 
   constructor() {
-    this.templatesDir = path.join(__dirname, '..', 'templates');
+    this.templatesDir = path.join(__dirname, 'templates');
     this.registerHelpers();
   }
 
