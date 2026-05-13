@@ -53,12 +53,16 @@ import { HealthController } from './health/health.controller';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       inject: [ConfigService],
-      useFactory: (cs: ConfigService<GatewayConfig>) => ({
-        secret: cs.get('jwt', { infer: true })?.secret ?? '',
-        signOptions: {
-          expiresIn: cs.get('jwt', { infer: true })?.expiresIn ?? '15m',
-        },
-      }),
+      useFactory: (cs: ConfigService<GatewayConfig>) => {
+        const jwt = cs.get('jwt', { infer: true });
+        return {
+          secret: jwt?.secret ?? '',
+          signOptions: {
+            expiresIn: (jwt?.expiresIn ??
+              '15m') as `${number}${'s' | 'm' | 'h' | 'd'}`,
+          },
+        };
+      },
     }),
 
     // ── Rate Limiting ─────────────────────────────────────────────────────────

@@ -59,10 +59,8 @@ async function bootstrap(): Promise<void> {
   });
 
   await app.listen(port, '0.0.0.0');
-  logger.log(
-    `🚀  API Gateway running at http://0.0.0.0:${port}/api/v1  [${env}]`,
-  );
-  logger.log(`❤️   Health check at http://0.0.0.0:${port}/health`);
+  logger.log(`API Gateway running at http://0.0.0.0:${port}/api/v1  [${env}]`);
+  logger.log(`Health check at http://0.0.0.0:${port}/health`);
 }
 
 bootstrap().catch((err: unknown) => {
