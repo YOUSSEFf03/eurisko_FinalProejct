@@ -19,8 +19,8 @@ services:
       context: .
       args:
         APP_NAME: api-gateway
-    environment:
-      - PORT=3000
+    env_file:
+      - .env
     ports:
       - "3000:3000"
     depends_on:
@@ -28,7 +28,6 @@ services:
       - redis
     networks:
       - microservices-net
-
   user-service:
     build:
       context: .

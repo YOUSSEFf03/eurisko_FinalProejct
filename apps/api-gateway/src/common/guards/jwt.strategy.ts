@@ -1,8 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
-import { GatewayConfig } from '../../config/gateway.config';
 
 export type UserRole = 'member' | 'admin' | 'analyst' | 'support_agent';
 
@@ -20,20 +18,25 @@ export interface AuthenticatedUser {
   role: UserRole;
 }
 
+/**
+ * Reads JWT_SECRET directly from process.env.
+ * ConfigService is NOT used here because passport strategies are
+ * instantiated before the config module finishes loading,
+ * causing "JwtStrategy requires a secret or key" at startup.
+ */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(private readonly config: ConfigService<GatewayConfig>) {
+  constructor() {
+    const secret = process.env['JWT_SECRET'];
+    if (!secret) throw new Error('JWT_SECRET env variable is not set');
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get('jwt', { infer: true })?.secret ?? '',
+      secretOrKey: secret,
     });
   }
 
-  /**
-   * Called after token signature is verified.
-   * Returned value is set as req.user.
-   */
   validate(payload: JwtPayload): AuthenticatedUser {
     if (!payload.sub || !payload.email || !payload.role) {
       throw new UnauthorizedException('Malformed token payload');
