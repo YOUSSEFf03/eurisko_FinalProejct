@@ -94,6 +94,39 @@ services:
     networks:
       - microservices-net
 
+  wallet-service:
+    build:
+      context: .
+      args:
+        APP_NAME: wallet-service
+    ports:
+      - "3005:3005"
+    environment:
+      PORT: 3005
+      MONGODB_URI: mongodb://root:root@mongodb:27017/wallet?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_CACHE_TTL: 300
+      KAFKA_BROKERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      LOCK_TTL_MS: 5000
+      WITHDRAWAL_HOLD_HRS: 48
+      MIN_DEPOSIT_AMOUNT: 10
+      MAX_DEPOSIT_AMOUNT: 100000
+
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_started
+
+    networks:
+      - microservices-net
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
