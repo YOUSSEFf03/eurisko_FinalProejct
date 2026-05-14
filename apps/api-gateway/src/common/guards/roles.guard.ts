@@ -10,15 +10,15 @@ import { AuthenticatedUser, UserRole } from './jwt.strategy';
 
 /**
  * Role hierarchy — higher index = more privilege.
- * admin implicitly passes any lower-role check.
+ * administrator implicitly passes any lower-role check.
  *
- * member (0) < support_agent (1) < analyst (2) < admin (3)
+ * member (0) < support_agent (1) < analyst (2) < administrator (3)
  */
 const ROLE_HIERARCHY: Record<UserRole, number> = {
   member: 0,
   support_agent: 1,
   analyst: 2,
-  admin: 3,
+  administrator: 3,
 };
 
 @Injectable()
@@ -31,7 +31,6 @@ export class RolesGuard implements CanActivate {
       context.getClass(),
     ]);
 
-    // No @Roles() decorator → any authenticated user may access
     if (!required || required.length === 0) return true;
 
     const { user } = context

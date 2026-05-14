@@ -49,7 +49,9 @@ export class WalletProxyService {
         timeout: 10_000,
       });
 
-      return response.data;
+      // Wallet-service already wraps in { success, statusCode, data }
+      // Return inner data only — gateway TransformInterceptor re-wraps
+      return response.data?.data ?? response.data;
     } catch (err) {
       const error = err as AxiosError;
 

@@ -2,12 +2,13 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
-export type UserRole = 'member' | 'admin' | 'analyst' | 'support_agent';
+export type UserRole = 'member' | 'administrator' | 'analyst' | 'support_agent';
 
 export interface JwtPayload {
-  sub: string; // userId — matches auth-service TokenService
+  sub: string;
   email: string;
-  role: UserRole;
+  role?: UserRole; // optional — auth-service may not include it
+  type?: string; // auth-service may send type instead of role
   iat?: number;
   exp?: number;
 }
@@ -18,12 +19,6 @@ export interface AuthenticatedUser {
   role: UserRole;
 }
 
-/**
- * Reads JWT_SECRET directly from process.env.
- * ConfigService is NOT used here because passport strategies are
- * instantiated before the config module finishes loading,
- * causing "JwtStrategy requires a secret or key" at startup.
- */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor() {
@@ -38,14 +33,20 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   validate(payload: JwtPayload): AuthenticatedUser {
-    if (!payload.sub || !payload.email || !payload.role) {
+    console.log('JWT PAYLOAD:', JSON.stringify(payload));
+    if (!payload.sub || !payload.email) {
       throw new UnauthorizedException('Malformed token payload');
     }
+
+    // Derive role from either role or type field
+    // auth-service tokens have no role — treat them as member
+    const role: UserRole =
+      payload.role ?? (payload.type as UserRole) ?? 'member';
 
     return {
       userId: payload.sub,
       email: payload.email,
-      role: payload.role,
+      role,
     };
   }
 }
