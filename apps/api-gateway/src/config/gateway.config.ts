@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { registerAs } from '@nestjs/config';
-import * as Joi from 'joi';
+import Joi = require('joi');
 
 export interface GatewayConfig {
   port: number;
@@ -27,6 +28,8 @@ export const validationSchema = Joi.object({
   THROTTLE_TTL: Joi.number().default(60),
   THROTTLE_LIMIT: Joi.number().default(100),
   ALLOWED_ORIGINS: Joi.string().default('*'),
+  AUTH_SERVICE_URL: Joi.string().default('http://auth-service:3003'),
+  WALLET_SERVICE_URL: Joi.string().default('http://wallet-service:3005'),
 });
 
 export default registerAs(

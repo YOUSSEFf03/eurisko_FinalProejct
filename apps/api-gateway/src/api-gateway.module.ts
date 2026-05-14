@@ -36,8 +36,9 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 // Health
 import { HealthController } from './health/health.controller';
 
-// Domain modules — add as you build them
-// import { WalletProxyModule } from './modules/wallet/wallet-proxy.module';
+// Domain proxy modules
+import { AuthProxyModule } from './modules/auth-proxy.module';
+import { WalletProxyModule } from './modules/wallet-proxy.module';
 
 @Module({
   imports: [
@@ -66,9 +67,6 @@ import { HealthController } from './health/health.controller';
     }),
 
     // ── Rate Limiting ─────────────────────────────────────────────────────────
-    // Two named throttlers:
-    //   default  → 100 req / 60s   (all routes)
-    //   auth     → 10  req / 60s   (applied via @Throttle({ auth: ... }))
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cs: ConfigService<GatewayConfig>) => {
@@ -90,8 +88,9 @@ import { HealthController } from './health/health.controller';
       },
     }),
 
-    // Domain modules
-    // WalletProxyModule,
+    // ── Domain proxy modules ──────────────────────────────────────────────────
+    AuthProxyModule,
+    WalletProxyModule,
   ],
 
   controllers: [HealthController],
@@ -99,46 +98,22 @@ import { HealthController } from './health/health.controller';
   providers: [
     JwtStrategy,
 
-    // ── Registration order is execution order ─────────────────────────────────
-
     // 1. Filter first — wraps everything including interceptor errors
-    {
-      provide: APP_FILTER,
-      useClass: GlobalExceptionFilter,
-    },
+    { provide: APP_FILTER, useClass: GlobalExceptionFilter },
 
     // 2. Guards: Throttler → JWT → Roles
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: RolesGuard,
-    },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
 
-    // 3. Interceptors: Logging (outermost) → Timeout → Transform (innermost)
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: LoggingInterceptor,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: TimeoutInterceptor,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: TransformInterceptor,
-    },
+    // 3. Interceptors: Logging → Timeout → Transform
+    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: TimeoutInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
   ],
 })
 export class ApiGatewayModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    // Order matters — RequestId must be first so Logger and others can read it
     consumer
       .apply(RequestIdMiddleware, SecurityHeadersMiddleware, LoggerMiddleware)
       .forRoutes({ path: '*', method: RequestMethod.ALL });
