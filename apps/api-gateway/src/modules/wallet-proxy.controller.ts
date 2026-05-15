@@ -13,27 +13,12 @@ import {
 import { Request } from 'express';
 import { WalletProxyService } from './wallet-proxy.service';
 import { Public } from '../common/decorators/public.decorator';
-
-interface JwtUser {
-  sub: string;
-  email: string;
-  role?: string;
-  type?: string;
-}
+import { AuthenticatedUser } from '../common/guards/jwt.strategy';
 
 interface AuthRequest extends Request {
-  user?: JwtUser;
+  user?: AuthenticatedUser;
 }
 
-/**
- * WalletProxyController
- *
- * Member routes — JWT required (default, JwtAuthGuard applied globally).
- * Gateway extracts user from JWT and injects x-user-* headers.
- *
- * Stripe webhook — @Public() so JwtAuthGuard is skipped.
- * Stripe calls this directly with its own signature header.
- */
 @Controller('wallet')
 export class WalletProxyController {
   constructor(private readonly walletProxy: WalletProxyService) {}
@@ -117,7 +102,7 @@ export class WalletProxyController {
   ) {
     return this.walletProxy.forward(
       'PATCH',
-      `/api/v1/wallet/cms/withdrawals/${id}/reject`,
+      `/api/v1//wallet/cms/withdrawals/${id}/reject`,
       this.user(req),
       body,
     );
@@ -129,7 +114,6 @@ export class WalletProxyController {
   @Public()
   @HttpCode(HttpStatus.OK)
   stripeWebhook(@Req() req: Request, @Body() body: unknown) {
-    // Forward raw body and stripe-signature header to wallet-service
     const signature = req.headers['stripe-signature'] as string;
     return this.walletProxy.forwardWebhook(body, signature);
   }
@@ -138,9 +122,9 @@ export class WalletProxyController {
 
   private user(req: AuthRequest) {
     return {
-      userId: req.user?.sub ?? '',
+      userId: req.user?.userId ?? '', // ✅ fixed: was req.user?.sub
       email: req.user?.email ?? '',
-      role: req.user?.role ?? req.user?.type ?? 'member',
+      role: req.user?.role ?? 'member',
     };
   }
 }

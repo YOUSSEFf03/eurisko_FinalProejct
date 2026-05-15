@@ -18,7 +18,6 @@ export class WalletProxyService {
   private readonly baseUrl: string;
 
   constructor() {
-    // Read directly from env — same pattern as JwtStrategy in this project
     this.baseUrl =
       process.env['WALLET_SERVICE_URL'] ?? 'http://wallet-service:3005';
   }
@@ -32,6 +31,12 @@ export class WalletProxyService {
     body?: unknown,
     query?: Record<string, string>,
   ): Promise<unknown> {
+    if (!user.userId) {
+      throw new InternalServerErrorException(
+        'UserContext.userId is empty — gateway user() helper misconfigured',
+      );
+    }
+
     const url = `${this.baseUrl}${path}`;
 
     try {
@@ -49,8 +54,6 @@ export class WalletProxyService {
         timeout: 10_000,
       });
 
-      // Wallet-service already wraps in { success, statusCode, data }
-      // Return inner data only — gateway TransformInterceptor re-wraps
       return response.data?.data ?? response.data;
     } catch (err) {
       const error = err as AxiosError;
@@ -67,7 +70,7 @@ export class WalletProxyService {
   // ─── Forward Stripe webhook (no user context, raw body) ──────────────────
 
   async forwardWebhook(body: unknown, signature: string): Promise<unknown> {
-    const url = `${this.baseUrl}/api/v1/wallet/deposit/webhook`;
+    const url = `${this.baseUrl}/wallet/deposit/webhook`; // ✅ fixed: was /api/v1/wallet/deposit/webhook
 
     try {
       const response = await axios.post(url, body, {
