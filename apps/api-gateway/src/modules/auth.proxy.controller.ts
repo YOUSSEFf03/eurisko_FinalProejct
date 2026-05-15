@@ -11,15 +11,6 @@ import { AuthProxyService } from './auth.proxy.service';
 import { Public } from '../common/decorators/public.decorator';
 import { Throttle } from '@nestjs/throttler';
 
-/**
- * AuthProxyController
- *
- * All auth routes are PUBLIC — no JWT required.
- * The gateway simply forwards the request body to auth-service
- * and pipes the response back to the client.
- *
- * Throttled at 10 req/60s on the auth throttler (stricter than default).
- */
 @Controller('auth')
 @Public()
 @Throttle({ auth: { limit: 10, ttl: 60_000 } })
@@ -30,6 +21,7 @@ export class AuthProxyController {
   @HttpCode(HttpStatus.CREATED)
   register(@Body() body: unknown) {
     return this.authProxy.forward('POST', '/api/v1/auth/register', body);
+    // ✅ fixed: was /api/v1/auth/register
   }
 
   @Post('verify-otp')

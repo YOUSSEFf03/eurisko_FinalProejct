@@ -110,8 +110,8 @@ export class WalletService {
         currency: 'USD',
         idempotencyKey,
       },
-      'https://example.com/success',
-      'https://example.com/cancel',
+      'http://localhost:3000/api/v1/wallet/balance',
+      'http://localhost:3000/api/v1/wallet/balance',
     );
 
     this.logger.log(
