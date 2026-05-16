@@ -39,6 +39,7 @@ import { HealthController } from './health/health.controller';
 // Domain proxy modules
 import { AuthProxyModule } from './modules/auth-proxy.module';
 import { WalletProxyModule } from './modules/wallet-proxy.module';
+import { UserProxyModule } from './modules/user-proxy.module';
 
 @Module({
   imports: [
@@ -91,6 +92,7 @@ import { WalletProxyModule } from './modules/wallet-proxy.module';
     // ── Domain proxy modules ──────────────────────────────────────────────────
     AuthProxyModule,
     WalletProxyModule,
+    UserProxyModule,
   ],
 
   controllers: [HealthController],

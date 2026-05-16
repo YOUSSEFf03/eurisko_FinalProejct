@@ -4,7 +4,6 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { KAFKA_CLIENT } from '../../common/constants';
 import { AppConfig } from '../../config/app.config';
 import { MemberEventsService } from './member-events.service';
-import { MemberRegisteredConsumer } from './member-registered.consumer';
 
 @Module({
   imports: [
@@ -32,7 +31,7 @@ import { MemberRegisteredConsumer } from './member-registered.consumer';
       },
     ]),
   ],
-  providers: [MemberEventsService, MemberRegisteredConsumer],
+  providers: [MemberEventsService],
   exports: [MemberEventsService, ClientsModule],
 })
 export class KafkaClientModule {}

@@ -5,6 +5,7 @@ import { MemberService } from './member.service';
 import { Member, MemberSchema } from '../../database/schemas/member.schema';
 import { CacheModule } from '../cache/cache.module';
 import { KafkaClientModule } from '../messaging/kafka-client.module';
+import { MemberRegisteredConsumer } from '../messaging/member-registered.consumer';
 import { CmsJwtAuthGuard } from '../../common/guards/cms-jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 
@@ -14,7 +15,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
     CacheModule,
     KafkaClientModule,
   ],
-  controllers: [MemberController],
+  controllers: [MemberController, MemberRegisteredConsumer], // ← consumer is a @Controller
   providers: [MemberService, CmsJwtAuthGuard, RolesGuard],
   exports: [MemberService],
 })

@@ -1,5 +1,5 @@
 import { Controller, Logger } from '@nestjs/common';
-import { EventPattern, Payload } from '@nestjs/microservices';
+import { EventPattern, Payload, Transport } from '@nestjs/microservices';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -39,7 +39,7 @@ export class MemberRegisteredConsumer {
     private readonly memberModel: Model<MemberDocument>,
   ) {}
 
-  @EventPattern(KAFKA_TOPICS.MEMBER_REGISTERED)
+  @EventPattern(KAFKA_TOPICS.MEMBER_REGISTERED, Transport.KAFKA)
   async handle(@Payload() event: MemberRegisteredEvent): Promise<void> {
     this.logger.log(`member.registered received | userId=${event.userId}`);
 

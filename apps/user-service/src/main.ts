@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ResponseTransformInterceptor } from './common/interceptors/response-transform.interceptor';
@@ -10,6 +11,23 @@ async function bootstrap(): Promise<void> {
 
   const app = await NestFactory.create(AppModule, {
     logger: ['log', 'warn', 'error'],
+  });
+
+  // ── Kafka consumer ────────────────────────────────────────────────────────
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.KAFKA,
+    options: {
+      client: {
+        clientId: 'user-service',
+        brokers: [process.env['KAFKA_BROKERS'] ?? 'kafka:9092'],
+      },
+      consumer: {
+        groupId: 'user-service-consumer',
+      },
+      subscribe: {
+        fromBeginning: true, // ← picks up missed events on restart
+      },
+    },
   });
 
   app.setGlobalPrefix('api/v1');
@@ -38,6 +56,9 @@ async function bootstrap(): Promise<void> {
   });
 
   app.enableShutdownHooks();
+
+  // ── Start both HTTP and Kafka ─────────────────────────────────────────────
+  await app.startAllMicroservices();
 
   const port = parseInt(process.env['PORT'] ?? '3002', 10);
   await app.listen(port, '0.0.0.0');

@@ -5,8 +5,10 @@ import {
   UnauthorizedException,
   NotFoundException,
   Logger,
+  Inject,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { ClientProxy } from '@nestjs/microservices';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../../database/schemas/user.schema';
 import { TokenService } from '../token/token.service';
@@ -17,7 +19,12 @@ import {
   compareToken,
   calculateAge,
 } from '../../utils/auth.util';
-import { OtpPurpose, UserStatus, MIN_MEMBER_AGE } from '../../common/constants';
+import {
+  OtpPurpose,
+  UserStatus,
+  MIN_MEMBER_AGE,
+  KAFKA_CLIENT,
+} from '../../common/constants';
 import { RegisterDto } from './dto/register.dto';
 import {
   SetPasswordDto,
@@ -31,14 +38,13 @@ import {
   ResetPasswordDto,
 } from './dto/login.dto';
 import { TokenPair, MemberProfile } from '../../common/types';
-
+import { OnModuleInit } from '@nestjs/common';
 export interface LoginResult extends TokenPair {
   member: MemberProfile;
 }
 
 @Injectable()
-export class AuthService {
-  [x: string]: any;
+export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
@@ -46,7 +52,13 @@ export class AuthService {
     private readonly userModel: Model<UserDocument>,
     private readonly tokenService: TokenService,
     private readonly otpService: OtpService,
+    @Inject(KAFKA_CLIENT)
+    private readonly kafkaClient: ClientProxy,
   ) {}
+
+  async onModuleInit() {
+    await this.kafkaClient.connect();
+  }
 
   // ─── Registration flow ────────────────────────────────────────────────────
 
@@ -117,6 +129,55 @@ export class AuthService {
     }
     await this.otpService.createAndSend(user, OtpPurpose.EMAIL_VERIFICATION);
     return { message: 'A new OTP has been sent.' };
+  }
+
+  // ─── Set password (step 3 of registration) ────────────────────────────────
+
+  async setPassword(dto: SetPasswordDto): Promise<{ message: string }> {
+    const user = await this.userModel
+      .findOne({ email: dto.email })
+      .select('+passwordHash');
+
+    if (!user) throw new NotFoundException('User not found');
+
+    const verified = await this.otpService.wasVerified(
+      String(user._id),
+      dto.code,
+      OtpPurpose.EMAIL_VERIFICATION,
+    );
+    if (!verified) {
+      throw new BadRequestException(
+        'OTP not verified or session expired. Please re-verify.',
+      );
+    }
+
+    user.passwordHash = await hashPassword(dto.password);
+    user.emailVerified = true;
+    user.status = UserStatus.ACTIVE;
+    await user.save();
+
+    // ── Publish member.registered ─────────────────────────────────────────────
+    // Fire-and-forget: user-service consumes this to create the Member document.
+    // Wrapped in try/catch — a Kafka failure must NEVER roll back a successful
+    // account activation. The user is already active in MongoDB.
+    try {
+      this.kafkaClient.emit('member.registered', {
+        userId: String(user._id),
+        fullName: user.fullName,
+        email: user.email,
+        nationalId: user.nationalId,
+        dateOfBirth: user.dateOfBirth.toISOString(),
+      });
+      this.logger.log(`member.registered emitted | email=${dto.email}`);
+    } catch (err) {
+      // Non-fatal — log and continue. Ops team can replay from DB if needed.
+      this.logger.error(
+        `Failed to emit member.registered | email=${dto.email}`,
+        err,
+      );
+    }
+
+    return { message: 'Password set successfully. You can now log in.' };
   }
 
   // ─── Login ────────────────────────────────────────────────────────────────
@@ -248,54 +309,5 @@ export class AuthService {
     const user = await this.userModel.findOne({ email });
     if (!user) throw new NotFoundException('User not found');
     return user;
-  }
-
-  // ─── EDIT: apps/auth-service/src/modules/auth/auth-service.service.ts ────────
-  //
-  // Find the setPassword() method and replace it with the version below.
-  // The only addition is the kafkaClient.emit() call at the end,
-  // after the user is saved and activated.
-  //
-  // Prerequisites — already present in auth-service:
-  //   @Inject(KAFKA_CLIENT) private readonly kafkaClient: ClientProxy
-  //   (KafkaClientModule is already imported in AuthModule)
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  async setPassword(dto: SetPasswordDto): Promise<{ message: string }> {
-    const user = await this.userModel
-      .findOne({ email: dto.email })
-      .select('+passwordHash');
-
-    if (!user) throw new NotFoundException('User not found');
-
-    const verified = await this.otpService.wasVerified(
-      String(user._id),
-      dto.code,
-      OtpPurpose.EMAIL_VERIFICATION,
-    );
-    if (!verified) {
-      throw new BadRequestException(
-        'OTP not verified or session expired. Please re-verify.',
-      );
-    }
-
-    user.passwordHash = await hashPassword(dto.password);
-    user.emailVerified = true;
-    user.status = UserStatus.ACTIVE;
-    await user.save();
-
-    // ── NEW: Publish member.registered so user-service creates the Member doc ──
-    this.kafkaClient.emit('member.registered', {
-      userId: String(user._id),
-      fullName: user.fullName,
-      email: user.email,
-      nationalId: user.nationalId,
-      dateOfBirth: user.dateOfBirth.toISOString(),
-    });
-
-    this.logger.log(
-      `Account activated + member.registered emitted: ${dto.email}`,
-    );
-    return { message: 'Password set successfully. You can now log in.' };
   }
 }

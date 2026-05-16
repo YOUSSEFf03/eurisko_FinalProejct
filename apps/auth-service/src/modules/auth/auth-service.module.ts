@@ -7,6 +7,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { User, UserSchema } from '../../database/schemas/user.schema';
 import { TokenModule } from '../token/token.module';
 import { OtpModule } from '../otp/otp.module';
+import { KafkaClientModule } from '../messaging/kafka-client.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { OtpModule } from '../otp/otp.module';
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     TokenModule,
     OtpModule,
+    KafkaClientModule, // ← required so AuthService can inject KAFKA_CLIENT
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
