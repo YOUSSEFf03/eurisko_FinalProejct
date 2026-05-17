@@ -23,6 +23,8 @@ services:
       - .env
     ports:
       - "3000:3000"
+    environment:
+      TRADING_SERVICE_URL: http://trading-service:3006
     depends_on:
       kafka:
         condition: service_started
@@ -145,6 +147,38 @@ services:
     networks:
       - microservices-net
 
+  trading-service:
+    build:
+      context: .
+      args:
+        APP_NAME: trading-service
+    ports:
+      - "3006:3006"
+    environment:
+      PORT: 3006
+      MONGODB_URI: mongodb://root:root@mongodb:27017/trading?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BROKERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET}
+      WALLET_SERVICE_URL: http://wallet-service:3005
+      LOCK_TTL_MS: 10000
+      STOCK_CACHE_TTL: 30
+      PORTFOLIO_CACHE_TTL: 60
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_started
+      kafka-init:
+        condition: service_completed_successfully
+      wallet-service:
+        condition: service_started
+    networks:
+      - microservices-net
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
@@ -185,6 +219,7 @@ services:
       kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic member.profile.updated --partitions 3 --replication-factor 1
       kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic member.suspended --partitions 3 --replication-factor 1
       kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic member.activated --partitions 3 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic member.kyc.updated --partitions 3 --replication-factor 1
 
       echo 'Creating notification topics...'
       kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic notification.otp.send --partitions 3 --replication-factor 1
