@@ -40,6 +40,7 @@ import { HealthController } from './health/health.controller';
 import { AuthProxyModule } from './modules/auth-proxy.module';
 import { WalletProxyModule } from './modules/wallet-proxy.module';
 import { UserProxyModule } from './modules/user-proxy.module';
+import { TradingProxyModule } from './modules/trading-proxy.module';
 
 @Module({
   imports: [
@@ -93,6 +94,7 @@ import { UserProxyModule } from './modules/user-proxy.module';
     AuthProxyModule,
     WalletProxyModule,
     UserProxyModule,
+    TradingProxyModule,
   ],
 
   controllers: [HealthController],

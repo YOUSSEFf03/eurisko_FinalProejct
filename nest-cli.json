@@ -72,6 +72,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/wallet-service/tsconfig.app.json"
       }
+    },
+    "trading-service": {
+      "type": "application",
+      "root": "apps/trading-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/trading-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/trading-service/tsconfig.app.json"
+      }
     }
   }
 }
