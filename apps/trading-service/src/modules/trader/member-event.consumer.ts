@@ -1,5 +1,5 @@
 import { Controller, Logger } from '@nestjs/common';
-import { EventPattern, Payload } from '@nestjs/microservices';
+import { EventPattern, Payload, Transport } from '@nestjs/microservices';
 import { TraderService } from './trader.service';
 import { KAFKA_TOPICS, TraderStatus, KycStatus } from '../../common/constants';
 
@@ -9,15 +9,19 @@ export class MemberEventConsumer {
 
   constructor(private readonly traderService: TraderService) {}
 
-  @EventPattern(KAFKA_TOPICS.MEMBER_REGISTERED)
+  @EventPattern(KAFKA_TOPICS.MEMBER_REGISTERED, Transport.KAFKA)
   async onMemberRegistered(
-    @Payload() payload: { _id: string; fullName: string; email: string },
+    @Payload() payload: { userId: string; fullName: string; email: string },
   ): Promise<void> {
     this.logger.log(`member.registered received: ${payload.email}`);
-    await this.traderService.upsertFromRegistration(payload);
+    await this.traderService.upsertFromRegistration({
+      _id: payload.userId,
+      fullName: payload.fullName,
+      email: payload.email,
+    });
   }
 
-  @EventPattern(KAFKA_TOPICS.MEMBER_SUSPENDED)
+  @EventPattern(KAFKA_TOPICS.MEMBER_SUSPENDED, Transport.KAFKA)
   async onMemberSuspended(
     @Payload() payload: { memberId: string },
   ): Promise<void> {
@@ -28,7 +32,7 @@ export class MemberEventConsumer {
     );
   }
 
-  @EventPattern(KAFKA_TOPICS.MEMBER_ACTIVATED)
+  @EventPattern(KAFKA_TOPICS.MEMBER_ACTIVATED, Transport.KAFKA)
   async onMemberActivated(
     @Payload() payload: { memberId: string },
   ): Promise<void> {
@@ -39,7 +43,7 @@ export class MemberEventConsumer {
     );
   }
 
-  @EventPattern(KAFKA_TOPICS.MEMBER_KYC_UPDATED)
+  @EventPattern(KAFKA_TOPICS.MEMBER_KYC_UPDATED, Transport.KAFKA)
   async onKycUpdated(
     @Payload() payload: { memberId: string; kycStatus: string },
   ): Promise<void> {

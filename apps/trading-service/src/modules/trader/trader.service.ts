@@ -1,4 +1,9 @@
-import { Injectable, Logger, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Trader, TraderDocument } from '../../database/schemas/trader.schema';
@@ -18,20 +23,34 @@ export class TraderService {
     fullName: string;
     email: string;
   }): Promise<void> {
-    await this.traderModel.findByIdAndUpdate(
-      new Types.ObjectId(payload._id),
-      {
-        $set: {
-          _id: new Types.ObjectId(payload._id),
-          fullName: payload.fullName,
-          email: payload.email,
-          status: TraderStatus.ACTIVE,
-          kycStatus: KycStatus.PENDING,
+    try {
+      await this.traderModel.findByIdAndUpdate(
+        new Types.ObjectId(payload._id),
+        {
+          $set: {
+            _id: new Types.ObjectId(payload._id),
+            fullName: payload.fullName,
+            email: payload.email,
+            status: TraderStatus.ACTIVE,
+            kycStatus: KycStatus.PENDING,
+          },
         },
-      },
-      { upsert: true, new: true },
-    );
-    this.logger.log(`Trader upserted: ${payload.email}`);
+        { upsert: true, new: true },
+      );
+      this.logger.log(`Trader upserted: ${payload.email}`);
+    } catch (err: unknown) {
+      // Duplicate key on email — trader already exists, safe to ignore
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
+        (err as { code: number }).code === 11000
+      ) {
+        this.logger.warn(`Trader already exists, skipping: ${payload.email}`);
+        return;
+      }
+      throw err;
+    }
   }
 
   async updateStatus(memberId: string, status: TraderStatus): Promise<void> {

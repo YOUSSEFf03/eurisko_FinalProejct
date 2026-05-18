@@ -1,6 +1,13 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// FILE: apps/trading-service/src/modules/analytics/analytics.service.ts
+// FULL REPLACEMENT — fixes AUM walletBalances (was hardcoded 0) and
+// active members displayName (was missing).
+// ─────────────────────────────────────────────────────────────────────────────
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
+import { ConfigService } from '@nestjs/config';
 import { Connection, Types } from 'mongoose';
+import axios from 'axios';
 import {
   VolumeQueryDto,
   VolumeGranularity,
@@ -45,12 +52,20 @@ export interface SectorAllocationEntry {
 @Injectable()
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
+  private readonly walletServiceUrl: string;
 
-  constructor(@InjectConnection() private readonly connection: Connection) {}
+  constructor(
+    @InjectConnection() private readonly connection: Connection,
+    private readonly configService: ConfigService,
+  ) {
+    this.walletServiceUrl = this.configService.get<string>(
+      'WALLET_SERVICE_URL',
+      'http://wallet-service:3005',
+    );
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // 1. Trading Volume Over Time
-  // GET /analytics/volume?stock_id=&granularity=day|month&from=&to=
   // ─────────────────────────────────────────────────────────────────────────
 
   async getTradingVolume(query: VolumeQueryDto): Promise<VolumeDataPoint[]> {
@@ -72,7 +87,6 @@ export class AnalyticsService {
       matchStage['executedAt'] = dateRange;
     }
 
-    // Date grouping format based on granularity
     const dateFormat =
       query.granularity === VolumeGranularity.MONTH ? '%Y-%m' : '%Y-%m-%d';
 
@@ -81,17 +95,11 @@ export class AnalyticsService {
       {
         $group: {
           _id: {
-            $dateToString: {
-              format: dateFormat,
-              date: '$executedAt',
-            },
+            $dateToString: { format: dateFormat, date: '$executedAt' },
           },
           sharesTraded: { $sum: '$shares' },
-          // totalAmount is stored as Decimal128 — convert via $toString then $toDouble
           totalValue: {
-            $sum: {
-              $toDouble: { $toString: '$totalAmount' },
-            },
+            $sum: { $toDouble: { $toString: '$totalAmount' } },
           },
         },
       },
@@ -106,13 +114,13 @@ export class AnalyticsService {
       },
     ];
 
-    const results = await ordersColl.aggregate(pipeline).toArray();
-    return results as VolumeDataPoint[];
+    return (await ordersColl
+      .aggregate(pipeline)
+      .toArray()) as VolumeDataPoint[];
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   // 2. Top Traded Stocks
-  // GET /analytics/stocks/top?limit=5&page=1
   // ─────────────────────────────────────────────────────────────────────────
 
   async getTopStocks(
@@ -157,10 +165,7 @@ export class AnalyticsService {
     ];
 
     const [result] = (await ordersColl.aggregate(pipeline).toArray()) as [
-      {
-        data: TopStockEntry[];
-        total: { count: number }[];
-      },
+      { data: TopStockEntry[]; total: { count: number }[] },
     ];
 
     return {
@@ -170,24 +175,15 @@ export class AnalyticsService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 3. Assets Under Management (AUM)
-  // GET /analytics/aum
-  // Wallet balances + current market value of all open positions
-  // Both computed via DB aggregation — no in-memory iteration
+  // 3. Assets Under Management (AUM) — FIXED
+  // Wallet balances fetched via HTTP from wallet-service internal endpoint.
+  // Position values computed via MongoDB aggregation in trading-service DB.
   // ─────────────────────────────────────────────────────────────────────────
 
   async getAum(): Promise<AumResult> {
-    // Wallet balances — from wallet DB
-    // NOTE: wallet-service uses a separate MongoDB DB ("wallet").
-    // Since we're in trading-service's DB ("trading"), we can only
-    // aggregate positions here. Wallet AUM must be fetched via HTTP
-    // from wallet-service's /internal/analytics/aum endpoint.
-    // For the position values, we do a full aggregation pipeline.
-
     const positionsColl = this.connection.collection('positions');
-    // const stocksColl = this.connection.collection('stocks');
 
-    // Aggregate total market value of all open positions by joining stocks
+    // ── Position market value (aggregation in trading DB) ─────────────────
     const positionsPipeline = [
       { $match: { shares: { $gt: 0 } } },
       {
@@ -218,34 +214,41 @@ export class AnalyticsService {
       .aggregate(positionsPipeline)
       .toArray()) as [{ totalPositionValue: number } | undefined];
 
-    const positionValues = posResult?.totalPositionValue ?? 0;
+    const positionValues = parseFloat(
+      (posResult?.totalPositionValue ?? 0).toFixed(2),
+    );
 
-    // Wallet balances are in a separate DB — we return position values
-    // and let the api-gateway or a cross-service call populate wallet balances.
-    // For a self-contained response we return what we have.
-    // TODO: Aggregate wallet balances via cross-DB or HTTP call to wallet-service.
-    return {
-      walletBalances: 0, // populated by api-gateway combining wallet-service data
-      positionValues: parseFloat(positionValues.toFixed(2)),
-      totalAum: parseFloat(positionValues.toFixed(2)),
-    };
+    // ── Wallet balances (HTTP call to wallet-service internal endpoint) ────
+    let walletBalances = 0;
+    try {
+      const resp = await axios.get<{ totalWalletBalance: number }>(
+        `${this.walletServiceUrl}/internal/analytics/wallet-aum`,
+        { timeout: 5_000 },
+      );
+      walletBalances = resp.data?.totalWalletBalance ?? 0;
+    } catch (err) {
+      // Non-fatal: log and return positions-only AUM
+      this.logger.warn(
+        `Could not fetch wallet balances for AUM: ${(err as Error).message}`,
+      );
+    }
+
+    const totalAum = parseFloat((walletBalances + positionValues).toFixed(2));
+
+    return { walletBalances, positionValues, totalAum };
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 4. Most Active Members
-  // GET /analytics/members/active?days=30&limit=10
+  // 4. Most Active Members — FIXED (now includes displayName)
   // ─────────────────────────────────────────────────────────────────────────
 
   async getActiveMembers(
     query: ActiveMembersQueryDto,
   ): Promise<ActiveMemberEntry[]> {
     const ordersColl = this.connection.collection('orders');
-    // const tradersColl = this.connection.collection('traders');
-
     const days = query.days ?? 30;
     const limit = query.limit ?? 10;
-    const since = new Date();
-    since.setDate(since.getDate() - days);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     const pipeline = [
       {
@@ -262,6 +265,7 @@ export class AnalyticsService {
       },
       { $sort: { tradeCount: -1 } },
       { $limit: limit },
+      // Join traders collection to get displayName
       {
         $lookup: {
           from: 'traders',
@@ -270,25 +274,24 @@ export class AnalyticsService {
           as: 'trader',
         },
       },
-      { $unwind: { path: '$trader', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$trader', preserveNullAndEmpty: false } },
       {
         $project: {
           _id: 0,
           memberId: { $toString: '$_id' },
-          displayName: { $ifNull: ['$trader.fullName', 'Unknown'] },
+          displayName: '$trader.fullName',
           tradeCount: 1,
         },
       },
     ];
 
-    const results = await ordersColl.aggregate(pipeline).toArray();
-    return results as ActiveMemberEntry[];
+    return (await ordersColl
+      .aggregate(pipeline)
+      .toArray()) as ActiveMemberEntry[];
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   // 5. Sector Allocation
-  // GET /analytics/sectors
-  // Only open position market values per sector (not wallet balances)
   // ─────────────────────────────────────────────────────────────────────────
 
   async getSectorAllocation(): Promise<SectorAllocationEntry[]> {
@@ -319,14 +322,10 @@ export class AnalyticsService {
         },
       },
       {
-        // Self-join via $group to compute total for percentage calculation
         $group: {
           _id: null,
           sectors: {
-            $push: {
-              sector: '$_id',
-              totalValue: '$totalValue',
-            },
+            $push: { sector: '$_id', totalValue: '$totalValue' },
           },
           grandTotal: { $sum: '$totalValue' },
         },
@@ -359,7 +358,8 @@ export class AnalyticsService {
       { $sort: { totalValue: -1 } },
     ];
 
-    const results = await positionsColl.aggregate(pipeline).toArray();
-    return results as SectorAllocationEntry[];
+    return (await positionsColl
+      .aggregate(pipeline)
+      .toArray()) as SectorAllocationEntry[];
   }
 }
