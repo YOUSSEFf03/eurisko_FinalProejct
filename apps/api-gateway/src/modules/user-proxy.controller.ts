@@ -136,4 +136,13 @@ export class UserProxyController {
       role: req.user?.role ?? 'member',
     };
   }
+
+  @Get('cms/analytics/member-growth')
+  getMemberGrowth(@Req() req: AuthRequest) {
+    return this.userProxy.forward(
+      'GET',
+      '/api/v1/cms/analytics/member-growth',
+      this.user(req),
+    );
+  }
 }

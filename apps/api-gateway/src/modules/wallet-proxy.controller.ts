@@ -127,4 +127,51 @@ export class WalletProxyController {
       role: req.user?.role ?? 'member',
     };
   }
+
+  @Post('cms/adjust/:memberId')
+  @HttpCode(HttpStatus.OK)
+  manualAdjust(
+    @Req() req: AuthRequest,
+    @Param('memberId') memberId: string,
+    @Body() body: unknown,
+  ) {
+    return this.walletProxy.forward(
+      'POST',
+      `/api/v1/wallet/cms/adjust/${memberId}`,
+      this.user(req),
+      body,
+    );
+  }
+
+  @Get('cms/alerts/negative-balances')
+  getNegativeBalances(@Req() req: AuthRequest) {
+    return this.walletProxy.forward(
+      'GET',
+      '/api/v1/wallet/cms/alerts/negative-balances',
+      this.user(req),
+    );
+  }
+
+  @Get('cms/withdrawals/summary')
+  getWithdrawalsSummary(@Req() req: AuthRequest) {
+    return this.walletProxy.forward(
+      'GET',
+      '/api/v1/wallet/cms/withdrawals/summary',
+      this.user(req),
+    );
+  }
+  @Get('cms/transactions/:memberId/history')
+  getCmsMemberHistory(
+    @Req() req: AuthRequest,
+    @Param('memberId') memberId: string,
+    @Query() query: Record<string, string>,
+  ) {
+    return this.walletProxy.forward(
+      'GET',
+      `/api/v1/wallet/cms/transactions/${memberId}/history`,
+      this.user(req),
+      undefined,
+      query,
+    );
+  }
 }
