@@ -7,7 +7,11 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
-import { Stock, StockDocument } from '../../database/schemas/stock.schema';
+import {
+  Stock,
+  StockDocument,
+  PriceHistoryEntry,
+} from '../../database/schemas/stock.schema';
 import {
   PriceAlert,
   PriceAlertDocument,
