@@ -227,4 +227,26 @@ export class StockService {
       });
     }
   }
+
+  async getPriceHistory(
+    id: Types.ObjectId,
+    from?: string,
+    to?: string,
+  ): Promise<PriceHistoryEntry[]> {
+    const stock = await this.stockModel.findById(id).lean();
+    if (!stock) throw new NotFoundException('Stock not found');
+
+    let history = (stock as Stock).priceHistory ?? [];
+
+    if (from) {
+      const fromDate = new Date(from);
+      history = history.filter((h) => h.recordedAt >= fromDate);
+    }
+    if (to) {
+      const toDate = new Date(to);
+      history = history.filter((h) => h.recordedAt <= toDate);
+    }
+
+    return history;
+  }
 }

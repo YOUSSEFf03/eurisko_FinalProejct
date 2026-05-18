@@ -61,4 +61,13 @@ export class StockController {
   findOne(@Param('id', ParseObjectIdPipe) id: Types.ObjectId) {
     return this.stockService.findById(id);
   }
+
+  @Get(':id/price-history')
+  getPriceHistory(
+    @Param('id', ParseObjectIdPipe) id: Types.ObjectId,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.stockService.getPriceHistory(id, from, to);
+  }
 }

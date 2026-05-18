@@ -267,4 +267,18 @@ export class AnalyticsProxyController {
       role: req.user?.role ?? 'member',
     };
   }
+  @Get(':id/price-history')
+  getPriceHistory(
+    @Req() req: AuthRequest,
+    @Param('id') id: string,
+    @Query() query: Record<string, string>,
+  ) {
+    return this.tradingProxy.forward(
+      'GET',
+      `/stocks/${id}/price-history`,
+      this.user(req),
+      undefined,
+      query,
+    );
+  }
 }
