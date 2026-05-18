@@ -110,4 +110,11 @@ export class MemberController {
   ) {
     return this.memberService.updateKyc(id, dto);
   }
+
+  @Get('cms/analytics/member-growth')
+  @UseGuards(CmsJwtAuthGuard, RolesGuard)
+  @Roles(CmsRole.ADMINISTRATOR)
+  getMemberGrowth() {
+    return this.memberService.getMemberGrowth();
+  }
 }

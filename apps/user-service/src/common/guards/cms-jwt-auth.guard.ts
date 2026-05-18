@@ -4,20 +4,8 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 
-/**
- * CmsJwtAuthGuard
- *
- * Checks that the incoming request carries an x-user-role header
- * containing a valid CMS role (administrator | support_agent | analyst).
- *
- * The api-gateway already verified the JWT and injected the role header.
- * This guard simply ensures a plain member cannot reach CMS routes.
- *
- * Applied at controller level on all /cms/* routes.
- */
 @Injectable()
 export class CmsJwtAuthGuard implements CanActivate {
   private static readonly CMS_ROLES = new Set([
@@ -25,8 +13,6 @@ export class CmsJwtAuthGuard implements CanActivate {
     'support_agent',
     'analyst',
   ]);
-
-  constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<Request>();

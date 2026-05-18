@@ -20,6 +20,8 @@ import { UpdateMemberDto } from './dto/update-member.dto';
 import { MemberQueryDto } from './dto/member-query.dto';
 import { CmsKycDto } from './dto/cms-kyc.dto';
 import { CmsSuspendDto } from './dto/cms-suspend.dto';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class MemberService {
@@ -30,6 +32,7 @@ export class MemberService {
     private readonly memberModel: Model<MemberDocument>,
     private readonly cacheService: CacheService,
     private readonly memberEventsService: MemberEventsService,
+    private readonly httpService: HttpService,
   ) {}
 
   // ─── Member: GET /members/me ──────────────────────────────────────────────
@@ -93,12 +96,50 @@ export class MemberService {
    * Portfolio placeholder — returns empty structure until order-service is built.
    * order-service will publish portfolio update events; this will consume them.
    */
-  async getPortfolio(
-    userId: string,
-  ): Promise<{ positions: []; totalValue: number }> {
+  async getPortfolio(userId: string): Promise<{
+    positions: unknown[];
+    totalValue: number;
+    totalProfitLoss: number;
+  }> {
     // Confirm member exists first
     await this.getProfile(userId);
-    return { positions: [], totalValue: 0 };
+
+    const cacheKey = `portfolio:${userId}`;
+
+    // Try cache
+    const cached = await this.cacheService.get<{
+      positions: unknown[];
+      totalValue: number;
+      totalProfitLoss: number;
+    }>(cacheKey);
+    if (cached) return cached;
+
+    // Fetch live from trading-service
+    try {
+      const tradingUrl =
+        process.env['TRADING_SERVICE_URL'] ?? 'http://trading-service:3006';
+
+      const resp = await firstValueFrom(
+        this.httpService.get(
+          `${tradingUrl}/api/v1/portfolio/${userId}/summary`,
+          {
+            timeout: 8_000,
+          },
+        ),
+      );
+      const portfolio = resp.data;
+
+      // Cache for 60s — invalidated by trading-service on every trade
+      await this.cacheService.set(cacheKey, portfolio, 60);
+
+      return portfolio;
+    } catch (err) {
+      this.logger.warn(
+        `Could not fetch portfolio from trading-service: ${(err as Error).message}`,
+      );
+      // Graceful degradation — return empty portfolio rather than 500
+      return { positions: [], totalValue: 0, totalProfitLoss: 0 };
+    }
   }
 
   // ─── CMS: GET /cms/members ────────────────────────────────────────────────
@@ -252,5 +293,79 @@ export class MemberService {
       `KYC updated | userId=${memberId} | status=${dto.kycStatus}`,
     );
     return member;
+  }
+
+  // ─── CMS (Admin only): GET /cms/analytics/member-growth ──────────────────
+  //
+  // Returns:
+  //   totalMembers       — total registered members (all time)
+  //   thisMonth          — members registered this calendar month
+  //   lastMonth          — members registered last calendar month
+  //   growthRate         — month-over-month % change
+  //   monthlyBreakdown   — last 6 months, one entry per month
+
+  async getMemberGrowth(): Promise<{
+    totalMembers: number;
+    thisMonth: number;
+    lastMonth: number;
+    growthRate: number;
+    monthlyBreakdown: { month: string; count: number }[];
+  }> {
+    const now = new Date();
+
+    // Start of this month
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Start of last month
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    // Start of 6 months ago
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+    const [totalMembers, thisMonth, lastMonth, monthlyBreakdown] =
+      await Promise.all([
+        // Total all-time
+        this.memberModel.countDocuments().exec(),
+
+        // This month
+        this.memberModel
+          .countDocuments({ createdAt: { $gte: thisMonthStart } })
+          .exec(),
+
+        // Last month
+        this.memberModel
+          .countDocuments({
+            createdAt: { $gte: lastMonthStart, $lt: thisMonthStart },
+          })
+          .exec(),
+
+        // Monthly breakdown — raw aggregation pipeline
+        this.memberModel.aggregate([
+          { $match: { createdAt: { $gte: sixMonthsAgo } } },
+          {
+            $group: {
+              _id: {
+                $dateToString: { format: '%Y-%m', date: '$createdAt' },
+              },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { _id: 1 } },
+          { $project: { _id: 0, month: '$_id', count: 1 } },
+        ]),
+      ]);
+
+    const growthRate =
+      lastMonth === 0
+        ? thisMonth > 0
+          ? 100
+          : 0
+        : parseFloat((((thisMonth - lastMonth) / lastMonth) * 100).toFixed(2));
+
+    return {
+      totalMembers,
+      thisMonth,
+      lastMonth,
+      growthRate,
+      monthlyBreakdown,
+    };
   }
 }
