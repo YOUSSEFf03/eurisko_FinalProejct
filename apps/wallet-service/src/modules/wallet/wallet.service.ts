@@ -9,7 +9,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import mongoose from 'mongoose';
 import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'crypto';
 
 import { Wallet, WalletDocument } from '../../database/schemas/wallet.schema';
 import { TransactionService } from '../transaction/transaction.service';
@@ -21,6 +20,7 @@ import { AppConfig } from '../../config/app.config';
 import { PaginatedResult } from '../../common/types';
 import { TransactionDocument } from '../../database/schemas/transaction.schema';
 import { TransactionHistoryQueryDto } from './dto/history-query.dto';
+import { randomUUID } from 'crypto';
 
 export interface StripeDepositInput {
   userId: string;
@@ -163,6 +163,7 @@ export class WalletService {
         idempotencyKey: input.idempotencyKey,
         stripePaymentIntentId: input.stripePaymentIntentId,
         stripeSessionId: input.stripeSessionId,
+        processedByCmsUserId: undefined,
       });
 
       // Step 4 — Atomic credit: $inc never underflows, no read-modify-write race
@@ -264,6 +265,7 @@ export class WalletService {
       balanceBefore: balance,
       currency: wallet.currency,
       idempotencyKey,
+      processedByCmsUserId: undefined,
     });
 
     this.logger.log(
@@ -462,5 +464,59 @@ export class WalletService {
     limit: number,
   ): Promise<PaginatedResult<TransactionDocument>> {
     return this.transactionService.findPendingWithdrawals(page, limit);
+  }
+
+  async manualAdjustment(
+    targetUserId: string,
+    amount: number, // positive = credit, negative = debit
+    justification: string,
+    cmsUserId: string,
+  ): Promise<{ newBalance: number; transactionId: string }> {
+    return this.lockService.withLock(targetUserId, async () => {
+      const wallet = await this.getWallet(targetUserId);
+      const currentBalance = parseFloat(wallet.balance.toString());
+      const newBalance = currentBalance + amount;
+
+      if (newBalance < 0) {
+        throw new BadRequestException(
+          `Adjustment would result in negative balance. Current: $${currentBalance.toFixed(2)}, Adjustment: $${amount}`,
+        );
+      }
+
+      await this.walletModel.findByIdAndUpdate(wallet._id, {
+        $set: {
+          balance: Types.Decimal128.fromString(newBalance.toFixed(6)),
+        },
+      });
+
+      const idempotencyKey = `manual:${cmsUserId}:${targetUserId}:${randomUUID()}`;
+      const type =
+        amount >= 0
+          ? TransactionType.MANUAL_CREDIT
+          : TransactionType.MANUAL_DEBIT;
+
+      const transaction = await this.transactionService.create({
+        userId: new Types.ObjectId(targetUserId),
+        type,
+        status: TransactionStatus.COMPLETED,
+        amount: Math.abs(amount),
+        balanceBefore: currentBalance,
+        balanceAfter: newBalance,
+        currency: wallet.currency,
+        idempotencyKey,
+        processedByCmsUserId: cmsUserId,
+        adjustmentNote: justification,
+        processedAt: new Date(),
+      });
+
+      this.logger.log(
+        `Manual adjustment | userId=${targetUserId} | amount=${amount} | by=${cmsUserId} | reason=${justification}`,
+      );
+
+      return {
+        newBalance: parseFloat(newBalance.toFixed(2)),
+        transactionId: String(transaction._id),
+      };
+    });
   }
 }

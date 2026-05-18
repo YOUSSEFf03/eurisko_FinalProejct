@@ -4,6 +4,8 @@ export enum TransactionType {
   BUY = 'buy',
   SELL = 'sell',
   ADJUSTMENT = 'adjustment',
+  MANUAL_CREDIT = 'MANUAL_CREDIT',
+  MANUAL_DEBIT = 'MANUAL_DEBIT',
 }
 
 export enum TransactionStatus {

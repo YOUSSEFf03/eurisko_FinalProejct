@@ -68,8 +68,8 @@ export class Transaction {
   idempotencyKey: string;
 
   // ── Withdrawal approval trail ─────────────────────────────────────────────
-  @Prop({ type: String })
-  processedByCmsUserId?: string;
+  @Prop({ type: String, default: null })
+  processedByCmsUserId: string | null;
 
   @Prop({ type: String })
   rejectionReason?: string;
@@ -78,8 +78,8 @@ export class Transaction {
   @Prop({ type: String })
   adjustmentNote?: string;
 
-  @Prop({ type: Date })
-  processedAt?: Date;
+  @Prop({ type: Date, default: null })
+  processedAt: Date | null;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

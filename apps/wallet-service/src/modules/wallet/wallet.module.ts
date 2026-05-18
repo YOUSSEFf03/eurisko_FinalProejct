@@ -15,7 +15,7 @@ import { InternalWalletService } from './internal-wallet.service';
 // Guards
 import { CmsJwtAuthGuard } from '../../common/guards/cms-jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-
+import { CmsTransactionController } from '../transaction/transaction.controller.cms';
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Wallet.name, schema: WalletSchema }]),
@@ -28,6 +28,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
     WalletController,
     StripeWebhookController,
     InternalWalletController,
+    CmsTransactionController,
   ],
   providers: [
     WalletService,

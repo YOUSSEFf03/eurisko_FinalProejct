@@ -28,7 +28,7 @@ import {
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CmsRole } from '../../common/constants';
 import { ParseObjectIdPipe } from '../../common/pipes/parse-object-id.pipe';
-
+import { ManualAdjustDto } from './dto/wallet.dto';
 /**
  * WalletController
  *
@@ -153,5 +153,24 @@ export class WalletController {
       { userId: '', email: '', name: '' },
     );
     return { message: 'Withdrawal rejected' };
+  }
+
+  // ─── CMS: Manual wallet adjustment (Admin only) ───────────────────────────
+
+  @Post('cms/adjust/:memberId')
+  @UseGuards(CmsJwtAuthGuard, RolesGuard)
+  @Roles(CmsRole.ADMINISTRATOR)
+  @HttpCode(HttpStatus.OK)
+  async manualAdjust(
+    @Param('memberId', ParseObjectIdPipe) memberId: Types.ObjectId,
+    @Body() dto: ManualAdjustDto,
+    @CurrentUser() cmsUser: RequestUser,
+  ) {
+    return this.walletService.manualAdjustment(
+      memberId.toString(),
+      dto.amount,
+      dto.justification,
+      cmsUser.userId,
+    );
   }
 }
