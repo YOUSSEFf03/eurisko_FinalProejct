@@ -8,12 +8,14 @@ import { KafkaClientModule } from '../messaging/kafka-client.module';
 import { MemberRegisteredConsumer } from '../messaging/member-registered.consumer';
 import { CmsJwtAuthGuard } from '../../common/guards/cms-jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Member.name, schema: MemberSchema }]),
     CacheModule,
     KafkaClientModule,
+    HttpModule,
   ],
   controllers: [MemberController, MemberRegisteredConsumer], // ← consumer is a @Controller
   providers: [MemberService, CmsJwtAuthGuard, RolesGuard],

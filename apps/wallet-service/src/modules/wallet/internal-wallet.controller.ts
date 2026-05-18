@@ -10,12 +10,15 @@ import {
   Body,
   HttpCode,
   HttpStatus,
-  Logger,
+  Get,
+  UseGuards,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import mongoose from 'mongoose';
+
 import { InternalWalletService } from './internal-wallet.service';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { CmsJwtAuthGuard } from '../../common/guards/cms-jwt-auth.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { CmsRole } from '../../common/constants';
 
 export class InternalDeductDto {
   userId: string;
@@ -31,6 +34,7 @@ export class InternalCreditDto {
 
 @Controller('internal/wallet')
 export class InternalWalletController {
+  walletService: any;
   constructor(private readonly internalWalletService: InternalWalletService) {}
 
   /**
@@ -41,7 +45,11 @@ export class InternalWalletController {
   @Post('deduct')
   @HttpCode(HttpStatus.OK)
   deduct(@Body() dto: InternalDeductDto) {
-    return this.internalWalletService.deduct(dto.userId, dto.amount, dto.orderId);
+    return this.internalWalletService.deduct(
+      dto.userId,
+      dto.amount,
+      dto.orderId,
+    );
   }
 
   /**
@@ -51,6 +59,17 @@ export class InternalWalletController {
   @Post('credit')
   @HttpCode(HttpStatus.OK)
   credit(@Body() dto: InternalCreditDto) {
-    return this.internalWalletService.credit(dto.userId, dto.amount, dto.orderId);
+    return this.internalWalletService.credit(
+      dto.userId,
+      dto.amount,
+      dto.orderId,
+    );
+  }
+
+  @Get('cms/withdrawals/summary')
+  @UseGuards(CmsJwtAuthGuard, RolesGuard)
+  @Roles(CmsRole.ADMINISTRATOR, CmsRole.SUPPORT_AGENT)
+  async getPendingWithdrawalsSummary() {
+    return this.walletService.getPendingWithdrawalsSummary();
   }
 }

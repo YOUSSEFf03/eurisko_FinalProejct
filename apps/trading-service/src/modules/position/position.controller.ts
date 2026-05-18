@@ -23,4 +23,9 @@ export class PositionController {
   ) {
     return this.positionService.getPosition(user.userId, stockId);
   }
+
+  @Get('portfolio/:memberId/summary')
+  async getPortfolioSummary(@Param('memberId') memberId: string) {
+    return this.positionService.getPortfolioSummary(memberId);
+  }
 }

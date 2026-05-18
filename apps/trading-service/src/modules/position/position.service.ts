@@ -6,10 +6,10 @@ import {
   Position,
   PositionDocument,
 } from '../../database/schemas/position.schema';
-// import { Stock } from '../../database/schemas/stock.schema';
 import { StockService } from '../stock/stock.service';
 import { CacheService } from '../cache/cache.service';
 import { REDIS_KEYS } from '../../common/constants';
+import { toFloat } from '../../common/utils/decimal.util';
 
 export interface PortfolioPosition {
   stockId: string;
@@ -71,11 +71,9 @@ export class PositionService {
 
     const portfolioPositions: PortfolioPosition[] = positions.map((pos, i) => {
       const stock = stocks[i];
-      const currentPrice = stock
-        ? parseFloat(stock.currentPrice.toString())
-        : 0;
-      const avgBuyPrice = parseFloat(pos.avgBuyPrice.toString());
-      const totalInvested = parseFloat(pos.totalInvested.toString());
+      const currentPrice = stock ? toFloat(stock.currentPrice) : 0;
+      const avgBuyPrice = toFloat(pos.avgBuyPrice);
+      const totalInvested = toFloat(pos.totalInvested);
       const currentValue = pos.shares * currentPrice;
       const unrealizedPnL = currentValue - totalInvested;
       const unrealizedPnLPercent =
@@ -89,8 +87,8 @@ export class PositionService {
         avgBuyPrice,
         totalInvested,
         currentPrice,
-        currentValue,
-        unrealizedPnL,
+        currentValue: parseFloat(currentValue.toFixed(2)),
+        unrealizedPnL: parseFloat(unrealizedPnL.toFixed(2)),
         unrealizedPnLPercent: parseFloat(unrealizedPnLPercent.toFixed(2)),
       };
     });
@@ -107,9 +105,9 @@ export class PositionService {
 
     const summary: PortfolioSummary = {
       positions: portfolioPositions,
-      totalInvested,
-      totalCurrentValue,
-      totalUnrealizedPnL,
+      totalInvested: parseFloat(totalInvested.toFixed(2)),
+      totalCurrentValue: parseFloat(totalCurrentValue.toFixed(2)),
+      totalUnrealizedPnL: parseFloat(totalUnrealizedPnL.toFixed(2)),
     };
 
     await this.cacheService.set(cacheKey, summary, this.portfolioCacheTtl);
@@ -130,9 +128,9 @@ export class PositionService {
     if (!position) throw new NotFoundException('Position not found');
 
     const stock = await this.stockService.findById(stockId);
-    const currentPrice = parseFloat(stock.currentPrice.toString());
-    const avgBuyPrice = parseFloat(position.avgBuyPrice.toString());
-    const totalInvested = parseFloat(position.totalInvested.toString());
+    const currentPrice = toFloat(stock.currentPrice);
+    const avgBuyPrice = toFloat(position.avgBuyPrice);
+    const totalInvested = toFloat(position.totalInvested);
     const currentValue = position.shares * currentPrice;
     const unrealizedPnL = currentValue - totalInvested;
     const unrealizedPnLPercent =
@@ -146,9 +144,64 @@ export class PositionService {
       avgBuyPrice,
       totalInvested,
       currentPrice,
-      currentValue,
-      unrealizedPnL,
+      currentValue: parseFloat(currentValue.toFixed(2)),
+      unrealizedPnL: parseFloat(unrealizedPnL.toFixed(2)),
       unrealizedPnLPercent: parseFloat(unrealizedPnLPercent.toFixed(2)),
+    };
+  }
+  async getPortfolioSummary(memberId: string): Promise<PortfolioSummary> {
+    const positions = await this.positionModel
+      .find({ memberId: new Types.ObjectId(memberId), shares: { $gt: 0 } })
+      .lean();
+
+    const stocks = await Promise.all(
+      positions.map((p) =>
+        this.stockService
+          .findById(p.stockId as Types.ObjectId)
+          .catch(() => null),
+      ),
+    );
+
+    const portfolioPositions: PortfolioPosition[] = positions.map((pos, i) => {
+      const stock = stocks[i];
+      const currentPrice = stock ? toFloat(stock.currentPrice) : 0;
+      const avgBuyPrice = toFloat(pos.avgBuyPrice);
+      const totalInvested = toFloat(pos.totalInvested);
+      const currentValue = pos.shares * currentPrice;
+      const unrealizedPnL = currentValue - totalInvested;
+      const unrealizedPnLPercent =
+        totalInvested > 0 ? (unrealizedPnL / totalInvested) * 100 : 0;
+
+      return {
+        stockId: (pos.stockId as Types.ObjectId).toString(),
+        ticker: pos.ticker,
+        companyName: pos.companyName,
+        shares: pos.shares,
+        avgBuyPrice,
+        totalInvested,
+        currentPrice,
+        currentValue: parseFloat(currentValue.toFixed(2)),
+        unrealizedPnL: parseFloat(unrealizedPnL.toFixed(2)),
+        unrealizedPnLPercent: parseFloat(unrealizedPnLPercent.toFixed(2)),
+      };
+    });
+
+    const totalInvested = portfolioPositions.reduce(
+      (s, p) => s + p.totalInvested,
+      0,
+    );
+    const totalCurrentValue = portfolioPositions.reduce(
+      (s, p) => s + p.currentValue,
+      0,
+    );
+
+    return {
+      positions: portfolioPositions,
+      totalInvested: parseFloat(totalInvested.toFixed(2)),
+      totalCurrentValue: parseFloat(totalCurrentValue.toFixed(2)),
+      totalUnrealizedPnL: parseFloat(
+        (totalCurrentValue - totalInvested).toFixed(2),
+      ),
     };
   }
 }

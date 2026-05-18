@@ -29,6 +29,7 @@ import { KAFKA_CLIENT } from '../../common/constants';
       },
     ]),
   ],
+  controllers: [MemberEventConsumer],
   providers: [TraderService, MemberEventConsumer],
   exports: [TraderService],
 })

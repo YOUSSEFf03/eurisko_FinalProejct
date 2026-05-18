@@ -10,6 +10,7 @@ import { TransactionType, TransactionStatus } from '../../common/constants';
 import { PaginatedResult, PaginationMeta } from '../../common/types';
 
 export interface CreateTransactionInput {
+  processedByCmsUserId: any | string;
   userId: Types.ObjectId;
   type: TransactionType;
   status: TransactionStatus;
@@ -21,6 +22,7 @@ export interface CreateTransactionInput {
   stripePaymentIntentId?: string;
   stripeSessionId?: string;
   adjustmentNote?: string;
+  processedAt?: Date;
 }
 
 export interface TransactionHistoryQuery {
@@ -34,6 +36,9 @@ export interface TransactionHistoryQuery {
 
 @Injectable()
 export class TransactionService {
+  aggregatePendingWithdrawals(): [any] | PromiseLike<[any]> {
+    throw new Error('Method not implemented.');
+  }
   private readonly logger = new Logger(TransactionService.name);
 
   constructor(
@@ -62,6 +67,8 @@ export class TransactionService {
         stripePaymentIntentId: input.stripePaymentIntentId,
         stripeSessionId: input.stripeSessionId,
         adjustmentNote: input.adjustmentNote,
+        processedByCmsUserId: input.processedByCmsUserId,
+        processedAt: input.processedAt,
       });
 
       this.logger.log(

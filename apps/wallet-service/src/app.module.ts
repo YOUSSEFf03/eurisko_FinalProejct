@@ -5,6 +5,7 @@ import { RedisModule } from '@nestjs-modules/ioredis';
 
 import appConfig, { validationSchema, AppConfig } from './config/app.config';
 import { WalletModule } from './modules/wallet/wallet.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
       validationSchema,
       validationOptions: { abortEarly: false },
     }),
-
+    ScheduleModule.forRoot(),
     // ── MongoDB ───────────────────────────────────────────────────────────────
     MongooseModule.forRootAsync({
       inject: [ConfigService],

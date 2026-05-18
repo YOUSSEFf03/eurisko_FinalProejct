@@ -41,7 +41,7 @@ import { AuthProxyModule } from './modules/auth-proxy.module';
 import { WalletProxyModule } from './modules/wallet-proxy.module';
 import { UserProxyModule } from './modules/user-proxy.module';
 import { TradingProxyModule } from './modules/trading-proxy.module';
-
+import { CmsAuthProxyModule } from './modules/cms-auth-proxy.module';
 @Module({
   imports: [
     // ── Config ──────────────────────────────────────────────────────────────
@@ -95,6 +95,7 @@ import { TradingProxyModule } from './modules/trading-proxy.module';
     WalletProxyModule,
     UserProxyModule,
     TradingProxyModule,
+    CmsAuthProxyModule,
   ],
 
   controllers: [HealthController],

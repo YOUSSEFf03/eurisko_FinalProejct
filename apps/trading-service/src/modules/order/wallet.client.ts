@@ -42,7 +42,7 @@ export class WalletClient {
   ): Promise<WalletDeductResult> {
     try {
       const resp = await axios.post<WalletApiResponse>(
-        `${this.baseUrl}/internal/wallet/deduct`,
+        `${this.baseUrl}/api/v1/internal/wallet/deduct`,
         { userId, amount, orderId },
         { timeout: 10_000 },
       );
@@ -78,7 +78,7 @@ export class WalletClient {
   ): Promise<WalletCreditResult> {
     try {
       const resp = await axios.post<WalletApiResponse>(
-        `${this.baseUrl}/internal/wallet/credit`,
+        `${this.baseUrl}/api/v1/internal/wallet/credit`,
         { userId, amount, orderId },
         { timeout: 10_000 },
       );

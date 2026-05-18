@@ -15,6 +15,7 @@ import { TransactionType, TransactionStatus } from '../../common/constants';
 @Injectable()
 export class InternalWalletService {
   private readonly logger = new Logger(InternalWalletService.name);
+  transactionModel: any;
 
   constructor(
     @InjectModel(Wallet.name)
@@ -73,6 +74,7 @@ export class InternalWalletService {
         balanceBefore: currentBalance,
         currency: wallet.currency ?? 'USD',
         idempotencyKey,
+        processedByCmsUserId: undefined,
       });
 
       // Atomic conditional deduct — guard against race conditions
@@ -157,6 +159,7 @@ export class InternalWalletService {
         balanceBefore: currentBalance,
         currency: wallet.currency ?? 'USD',
         idempotencyKey,
+        processedByCmsUserId: undefined,
       });
 
       const updated = await this.walletModel
@@ -187,5 +190,46 @@ export class InternalWalletService {
     });
 
     return { newBalance };
+  }
+
+  async getPendingWithdrawalsSummary(): Promise<{
+    count: number;
+    totalValue: number;
+  }> {
+    const [result] =
+      await this.transactionService.aggregatePendingWithdrawals();
+    return {
+      count: result?.count ?? 0,
+      totalValue: result?.totalValue ?? 0,
+    };
+  }
+
+  async aggregatePendingWithdrawals(): Promise<
+    { count: number; totalValue: number }[]
+  > {
+    return this.transactionModel.aggregate([
+      {
+        $match: {
+          type: 'withdrawal',
+          status: 'pending',
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 },
+          totalValue: {
+            $sum: { $toDouble: { $toString: '$amount' } },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          count: 1,
+          totalValue: { $round: ['$totalValue', 2] },
+        },
+      },
+    ]);
   }
 }

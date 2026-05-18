@@ -30,7 +30,7 @@ export class TradingProxyService {
     body?: unknown,
     query?: Record<string, string>,
   ): Promise<unknown> {
-    const url = `${this.baseUrl}${path}`;
+    const url = `${this.baseUrl}/api/v1${path}`;
 
     try {
       const response = await axios({

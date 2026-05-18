@@ -16,3 +16,9 @@ export enum NotificationEvent {
 export const MIN_MEMBER_AGE = 18;
 
 export const KAFKA_CLIENT = 'KAFKA_CLIENT';
+
+export enum CmsRole {
+  ADMINISTRATOR = 'administrator',
+  ANALYST = 'analyst',
+  SUPPORT_AGENT = 'support_agent',
+}

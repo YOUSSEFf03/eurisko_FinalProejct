@@ -1,4 +1,12 @@
-import { IsNumber, IsPositive, IsString, Min, Max } from 'class-validator';
+import {
+  IsNumber,
+  IsPositive,
+  IsString,
+  Min,
+  Max,
+  IsNotEmpty,
+  MinLength,
+} from 'class-validator';
 
 export class InitiateDepositDto {
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -18,4 +26,15 @@ export class WithdrawDto {
 export class RejectWithdrawalDto {
   @IsString()
   reason: string;
+}
+
+export class ManualAdjustDto {
+  @IsNumber()
+  @IsNotEmpty()
+  amount: number; // positive = credit, negative = debit
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(10, { message: 'Justification must be at least 10 characters' })
+  justification: string;
 }

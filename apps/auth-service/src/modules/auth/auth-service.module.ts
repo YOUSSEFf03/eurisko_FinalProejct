@@ -8,7 +8,8 @@ import { User, UserSchema } from '../../database/schemas/user.schema';
 import { TokenModule } from '../token/token.module';
 import { OtpModule } from '../otp/otp.module';
 import { KafkaClientModule } from '../messaging/kafka-client.module';
-
+import { CmsAuthModule } from '../cms-auth/cms-auth.module';
+import { SeedService } from '../../seed/seed.service';
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -16,9 +17,10 @@ import { KafkaClientModule } from '../messaging/kafka-client.module';
     TokenModule,
     OtpModule,
     KafkaClientModule, // ← required so AuthService can inject KAFKA_CLIENT
+    CmsAuthModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, SeedService],
   exports: [AuthService],
 })
 export class AuthModule {}
