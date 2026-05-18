@@ -19,18 +19,10 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { CmsJwtAuthGuard } from '../../common/guards/cms-jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CmsRole } from '../../common/constants';
-
-export class InternalDeductDto {
-  userId: string;
-  amount: number;
-  orderId: string; // idempotency key
-}
-
-export class InternalCreditDto {
-  userId: string;
-  amount: number;
-  orderId: string; // idempotency key
-}
+import {
+  InternalDeductDto,
+  InternalCreditDto,
+} from './dto/internal-wallet.dto';
 
 @Controller('internal/wallet')
 export class InternalWalletController {
