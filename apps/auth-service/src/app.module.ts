@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
 import appConfig, { validationSchema, AppConfig } from './config/app.config';
 import { AuthModule } from './modules/auth/auth-service.module';
+import { CmsAuthModule } from './modules/cms-auth/cms-auth.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { AuthModule } from './modules/auth/auth-service.module';
       }),
     }),
     AuthModule,
+    CmsAuthModule,
   ],
 })
 export class AppModule {}
