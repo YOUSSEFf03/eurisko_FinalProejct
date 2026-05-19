@@ -28,8 +28,15 @@ export class AlertService {
   async create(memberId: string, dto: CreateAlertDto): Promise<PriceAlert> {
     const stockId = new Types.ObjectId(dto.stockId);
 
+    // Stock must exist
     const stock = await this.stockModel.findById(stockId).lean();
     if (!stock) throw new NotFoundException('Stock not found');
+
+    // Get trader for email/name — needed by alert-worker
+    const trader = await this.traderModel
+      .findById(new Types.ObjectId(memberId))
+      .lean();
+    if (!trader) throw new NotFoundException('Trader profile not found');
 
     const alert = await this.alertModel.create({
       memberId: new Types.ObjectId(memberId),
@@ -37,6 +44,8 @@ export class AlertService {
       ticker: stock.ticker,
       targetPrice: Types.Decimal128.fromString(String(dto.targetPrice)),
       direction: dto.direction,
+      memberEmail: trader.email, // ← ADD
+      memberName: trader.fullName, // ← ADD
       triggered: false,
     });
 

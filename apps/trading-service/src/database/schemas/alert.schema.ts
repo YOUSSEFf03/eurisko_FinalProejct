@@ -24,6 +24,11 @@ export class PriceAlert {
   @Prop({ type: Boolean, default: false, index: true })
   triggered: boolean;
 
+  @Prop({ type: String, required: true })
+  memberEmail: string;
+
+  @Prop({ type: String, required: true })
+  memberName: string;
   createdAt: Date;
   updatedAt: Date;
 }

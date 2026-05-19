@@ -80,40 +80,41 @@ export class StockService {
       updateFields['description'] = dto.description;
 
     let priceChanged = false;
+
     if (dto.currentPrice !== undefined) {
+      priceChanged = true;
       const newPrice = Types.Decimal128.fromString(String(dto.currentPrice));
       updateFields['currentPrice'] = newPrice;
-      priceChanged = true;
-      await this.stockModel.findByIdAndUpdate(id, {
-        $push: {
-          priceHistory: {
-            $each: [{ price: newPrice, recordedAt: new Date() }],
-            $slice: -PRICE_HISTORY_MAX,
-          },
+      updateFields['$push'] = {
+        priceHistory: {
+          $each: [{ price: newPrice, recordedAt: new Date() }],
+          $slice: -PRICE_HISTORY_MAX,
         },
-      });
+      };
     }
 
     const updated = await this.stockModel
-      .findByIdAndUpdate(id, { $set: updateFields }, { new: true })
+      .findByIdAndUpdate(id, updateFields, { new: true })
       .lean();
+
     if (!updated) throw new NotFoundException('Stock not found');
 
+    // Invalidate cache
     await this.cacheService.del(REDIS_KEYS.stockCache(id.toString()));
     await this.cacheService.del(REDIS_KEYS.stockCatalogue);
 
+    // Emit to Kafka — alert-worker handles batch processing
     if (priceChanged && dto.currentPrice !== undefined) {
-      setImmediate(() => {
-        this.checkAlerts(id.toString(), dto.currentPrice!).catch(
-          (err: unknown) =>
-            this.logger.error(`Alert check failed: ${String(err)}`),
-        );
+      this.messagingService.emitPriceUpdated({
+        stockId: id.toString(),
+        ticker: (updated as Stock).ticker,
+        newPrice: dto.currentPrice,
       });
     }
 
+    this.logger.log(`Stock updated: ${(updated as Stock).ticker}`);
     return updated as Stock;
   }
-
   async delist(id: Types.ObjectId): Promise<Stock> {
     const updated = await this.stockModel
       .findByIdAndUpdate(id, { $set: { isListed: false } }, { new: true })
