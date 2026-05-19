@@ -179,6 +179,26 @@ services:
     networks:
       - microservices-net
 
+  alert-worker:
+    build:
+      context: .
+      args:
+        APP_NAME: alert-worker
+    environment:
+      MONGODB_URI: mongodb://root:root@mongodb:27017/trading?authSource=admin
+      KAFKA_BROKERS: kafka:9092
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - microservices-net
+    deploy:
+      replicas: 2
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
@@ -227,6 +247,7 @@ services:
       kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic notification.trade.executed --partitions 3 --replication-factor 1
       kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic notification.price.alert --partitions 3 --replication-factor 1
       kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic notification.cms.provisioned --partitions 3 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic stock.price.updated --partitions 3 --replication-factor 1
 
       echo 'All topics created:'
       kafka-topics --bootstrap-server kafka:9092 --list

@@ -81,6 +81,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/trading-service/tsconfig.app.json"
       }
+    },
+    "alert-worker": {
+      "type": "application",
+      "root": "apps/alert-worker",
+      "entryFile": "main",
+      "sourceRoot": "apps/alert-worker/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/alert-worker/tsconfig.app.json"
+      }
     }
   }
 }

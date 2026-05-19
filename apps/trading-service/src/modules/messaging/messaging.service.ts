@@ -29,4 +29,14 @@ export class MessagingService implements OnModuleInit {
       `PriceAlert event emitted | userId=${event.userId} | ${event.ticker}`,
     );
   }
+  emitPriceUpdated(payload: {
+    stockId: string;
+    ticker: string;
+    newPrice: number;
+  }): void {
+    this.kafkaClient.emit('stock.price.updated', payload);
+    this.logger.log(
+      `stock.price.updated emitted | ticker=${payload.ticker} | price=${payload.newPrice}`,
+    );
+  }
 }
