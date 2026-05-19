@@ -100,7 +100,6 @@ export class WalletService {
       );
     }
 
-    // Idempotency key ties this specific deposit intent to the Stripe session
     const idempotencyKey = `deposit:${member.userId}:${randomUUID()}`;
 
     const result = await this.stripeService.createDepositSession(
@@ -110,8 +109,8 @@ export class WalletService {
         currency: 'USD',
         idempotencyKey,
       },
-      'http://localhost:3000/api/v1/wallet/balance',
-      'http://localhost:3000/api/v1/wallet/balance',
+      'https://dashboard.stripe.com/test/payments',
+      'https://dashboard.stripe.com/test/payments',
     );
 
     this.logger.log(
